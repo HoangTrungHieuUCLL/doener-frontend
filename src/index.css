@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Neutral grey base */
+  --color-bg: #f6f6f4;
+  --color-surface: #ffffff;
+  --color-surface-alt: #eeeeec;
+  --color-border: #e1e0dc;
+  --color-border-strong: #c9c8c2;
+
+  --color-ink: #1c1d1f;
+  --color-ink-secondary: #55575c;
+  --color-ink-tertiary: #6d6f74;
+  --color-ink-placeholder: #a9abae;
+
+  /* The one quiet accent: dusty slate-blue. `accent` is used for fills,
+     icons, borders and focus rings; `accent-strong` is a darker step of the
+     same hue reserved for anywhere text/icons need AA-safe contrast (button
+     labels, links) -- still a single accent hue, just two steps of it. */
+  --color-accent: #6e7c91;
+  --color-accent-strong: #55637a;
+  --color-accent-soft: #e7eaef;
+
+  /* Status semantics (distinct hue from accent, used sparingly). The base
+     tone is used for fills/dots/icons; the darker "-text" step is what
+     actually renders as text so it clears 4.5:1 on light backgrounds. */
+  --color-positive: #7c9070;
+  --color-positive-text: #4f6b45;
+  --color-positive-soft: #ebeee6;
+  --color-negative: #b9645f;
+  --color-negative-text: #96453f;
+  --color-negative-soft: #f4e7e6;
+
+  /* Together view: two muted person tones (fills/borders/avatars). Each has
+     a darker "-text" step for anywhere the color needs to render as text. */
+  --color-person-a: #b98080;
+  --color-person-a-text: #8f5852;
+  --color-person-a-soft: #f4e9e9;
+  --color-person-b: #8fa888;
+  --color-person-b-text: #4c6a49;
+  --color-person-b-soft: #edf1ea;
+
+  --radius-card: 1rem;
+  --radius-control: 0.75rem;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Minimum comfortable tap target per HIG (44x44pt) */
+.tap-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+input,
+select,
+textarea,
+button {
+  font-family: inherit;
+}
+
+::selection {
+  background: var(--color-accent-soft);
+}
