@@ -46,7 +46,7 @@ export function AppShell() {
           ))}
         </nav>
         <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-4 px-2">
-          <span className="truncate text-[13px] text-ink-tertiary">{user?.name ?? user?.email}</span>
+          <span className="truncate text-[13px] text-ink-tertiary">{user?.display_name ?? user?.username}</span>
           <button
             onClick={logout}
             className="tap-target rounded-[var(--radius-control)] px-2 text-[13px] font-medium text-ink-secondary hover:bg-surface-alt"

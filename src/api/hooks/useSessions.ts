@@ -1,23 +1,32 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../client'
 import { queryKeys } from '../queryKeys'
-import type { CardioLog, Session, SessionListResponse, SetLog, WorkoutKey } from '../types'
+import type {
+  CardioLog,
+  Session,
+  SessionDetail,
+  SessionListResponse,
+  SessionWorkoutKey,
+  SetLog,
+} from '../types'
 
-const PAGE_SIZE = 10
+export const PAGE_SIZE = 10
 
-export function useSession(id: string | null) {
+export function useSession(id: number | null) {
   return useQuery({
-    queryKey: queryKeys.session(id ?? 'none'),
-    queryFn: () => api.get<Session>(`/sessions/${id}`),
-    enabled: Boolean(id),
+    queryKey: queryKeys.session(id ?? -1),
+    queryFn: () => api.get<SessionDetail>(`/sessions/${id}`),
+    enabled: id !== null,
   })
 }
 
+/** Page is 1-based in the UI; translated to limit/offset for the API. */
 export function useSessionsList(page: number) {
+  const limit = PAGE_SIZE
+  const offset = (page - 1) * PAGE_SIZE
   return useQuery({
-    queryKey: queryKeys.sessions(page),
-    queryFn: () =>
-      api.get<SessionListResponse>(`/sessions?page=${page}&page_size=${PAGE_SIZE}`),
+    queryKey: queryKeys.sessions(limit, offset),
+    queryFn: () => api.get<SessionListResponse>(`/sessions?limit=${limit}&offset=${offset}`),
     placeholderData: (prev) => prev,
   })
 }
@@ -25,7 +34,8 @@ export function useSessionsList(page: number) {
 export function useStartSession() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (workout_key: WorkoutKey) => api.post<Session>('/sessions', { workout_key }),
+    mutationFn: (workout_key: SessionWorkoutKey) =>
+      api.post<Session>('/sessions', { workout_key }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sessions'] })
     },
@@ -33,10 +43,9 @@ export function useStartSession() {
 }
 
 export interface LogSetInput {
-  sessionId: string
-  exercise_key: string
-  side?: 'left' | 'right'
-  weight?: number
+  sessionId: number
+  exercise_id: number
+  weight_kg?: number
   reps?: number
   duration_sec?: number
 }
@@ -55,10 +64,9 @@ export function useLogSet() {
 }
 
 export interface LogCardioInput {
-  sessionId: string
-  duration_min: number
-  distance_km?: number
-  notes?: string
+  sessionId: number
+  duration_sec: number
+  distance_km: number
 }
 
 export function useLogCardio() {
@@ -75,7 +83,7 @@ export function useLogCardio() {
 export function useFinishSession() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (sessionId: string) => api.post<Session>(`/sessions/${sessionId}/finish`),
+    mutationFn: (sessionId: number) => api.post<Session>(`/sessions/${sessionId}/finish`),
     onSuccess: (_data, sessionId) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.session(sessionId) })
       queryClient.invalidateQueries({ queryKey: ['sessions'] })

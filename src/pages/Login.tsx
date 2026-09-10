@@ -10,7 +10,7 @@ export function Login() {
   const { login, authError, clearAuthError } = useAuth()
   const navigate = useNavigate()
   const location = useLocation() as { state?: { from?: { pathname: string } } }
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -19,7 +19,7 @@ export function Login() {
     clearAuthError()
     setSubmitting(true)
     try {
-      await login(email, password)
+      await login(username, password)
       const dest = location.state?.from?.pathname ?? '/today'
       navigate(dest, { replace: true })
     } catch {
@@ -40,13 +40,13 @@ export function Login() {
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input
-            id="email"
-            label="Email"
-            type="email"
-            autoComplete="email"
+            id="username"
+            label="Username"
+            type="text"
+            autoComplete="username"
             required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
           />
           <Input
             id="password"

@@ -9,7 +9,7 @@ import {
   useSession,
   useStartSession,
 } from '../api/hooks/useSessions'
-import type { Exercise, SetLog, WorkoutKey } from '../api/types'
+import type { Exercise, SessionSetDetail, SessionWorkoutKey } from '../api/types'
 import { ExerciseMotionGuide } from '../components/ExerciseMotionGuide'
 import { RestTimer } from '../components/RestTimer'
 import { Badge } from '../components/ui/Badge'
@@ -23,26 +23,33 @@ import { getMotionGuide } from '../motion/motionGuides'
 
 const ACCENT = '#6e7c91'
 
-const WORKOUT_LABELS: Record<WorkoutKey, string> = {
-  a: 'Workout A',
-  b: 'Workout B',
-  c: 'Workout C',
+const WORKOUT_LABELS: Record<SessionWorkoutKey, string> = {
+  A: 'Workout A',
+  B: 'Workout B',
+  C: 'Workout C',
   cardio: 'Cardio',
+}
+
+const SESSION_WORKOUT_KEYS: SessionWorkoutKey[] = ['A', 'B', 'C', 'cardio']
+
+function isSessionWorkoutKey(key: string | undefined | null): key is SessionWorkoutKey {
+  return key === 'A' || key === 'B' || key === 'C' || key === 'cardio'
 }
 
 export function Today() {
   const today = todayISO()
   const { data: exercises, isLoading: exercisesLoading } = useExercises()
   const { data: planEntries } = usePlan(today, today)
-  const [activeSessionId, setActiveSessionId] = useLocalStorageState<string | null>(
+  const [activeSessionId, setActiveSessionId] = useLocalStorageState<number | null>(
     'doener.activeSessionId',
     null,
   )
   const { data: session, isLoading: sessionLoading } = useSession(activeSessionId)
   const startSession = useStartSession()
 
-  const plannedKey = planEntries?.find((p) => p.date === today)?.workout_key ?? null
-  const [pickedKey, setPickedKey] = useState<WorkoutKey>(plannedKey ?? 'a')
+  const planWorkoutKey = planEntries?.find((p) => p.date === today)?.workout_key ?? null
+  const plannedKey = isSessionWorkoutKey(planWorkoutKey) ? planWorkoutKey : null
+  const [pickedKey, setPickedKey] = useState<SessionWorkoutKey>(plannedKey ?? 'A')
 
   async function handleStart() {
     const res = await startSession.mutateAsync(plannedKey ?? pickedKey)
@@ -53,11 +60,11 @@ export function Today() {
     setActiveSessionId(null)
   }
 
-  if (exercisesLoading || (activeSessionId && sessionLoading)) {
+  if (exercisesLoading || (activeSessionId !== null && sessionLoading)) {
     return <p className="py-10 text-center text-ink-tertiary">Loading…</p>
   }
 
-  if (!activeSessionId || !session) {
+  if (activeSessionId === null || !session) {
     return (
       <div className="flex flex-col gap-6">
         <header>
@@ -65,13 +72,15 @@ export function Today() {
           <p className="text-[14px] text-ink-secondary">
             {plannedKey
               ? `Your plan says ${WORKOUT_LABELS[plannedKey]} today.`
-              : 'No plan set for today — pick a workout to start.'}
+              : planWorkoutKey
+                ? `Your plan says "${planWorkoutKey}" today — pick a workout to log.`
+                : 'No plan set for today — pick a workout to start.'}
           </p>
         </header>
 
         {!plannedKey && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {(Object.keys(WORKOUT_LABELS) as WorkoutKey[]).map((key) => (
+            {SESSION_WORKOUT_KEYS.map((key) => (
               <button
                 key={key}
                 onClick={() => setPickedKey(key)}
@@ -105,7 +114,7 @@ export function Today() {
       sessionId={session.id}
       workoutKey={session.workout_key}
       startedAt={session.started_at}
-      loggedSets={session.sets ?? []}
+      loggedSets={session.sets}
       exercises={exercises ?? []}
     />
   )
@@ -115,7 +124,7 @@ function FinishedSummary({
   session,
   onStartNew,
 }: {
-  session: { total_volume: number | null; workout_key: WorkoutKey }
+  session: { total_volume_kg: number | null; workout_key: SessionWorkoutKey }
   onStartNew: () => void
 }) {
   return (
@@ -129,10 +138,10 @@ function FinishedSummary({
         <h1 className="text-[22px] font-semibold text-ink">Workout complete</h1>
         <p className="text-[14px] text-ink-secondary">{WORKOUT_LABELS[session.workout_key]} is in the books.</p>
       </div>
-      {session.total_volume !== null && (
+      {session.total_volume_kg !== null && (
         <Card className="w-full max-w-xs">
           <p className="text-[13px] text-ink-tertiary">Total volume</p>
-          <p className="text-[28px] font-semibold text-ink">{Math.round(session.total_volume)} kg</p>
+          <p className="text-[28px] font-semibold text-ink">{Math.round(session.total_volume_kg)} kg</p>
         </Card>
       )}
       <Button onClick={onStartNew}>Back to Today</Button>
@@ -141,10 +150,10 @@ function FinishedSummary({
 }
 
 interface ActiveSessionProps {
-  sessionId: string
-  workoutKey: WorkoutKey
+  sessionId: number
+  workoutKey: SessionWorkoutKey
   startedAt: string
-  loggedSets: SetLog[]
+  loggedSets: SessionSetDetail[]
   exercises: Exercise[]
 }
 
@@ -152,23 +161,20 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
   const elapsed = useStopwatch(startedAt)
   const finishSession = useFinishSession()
   const [restTimer, setRestTimer] = useState<{ key: number; durationSec: number } | null>(null)
-  const [newPrKeys, setNewPrKeys] = useState<Record<string, boolean>>({})
+  const [newPrIds, setNewPrIds] = useState<Record<number, boolean>>({})
 
   const warmupExercises = useMemo(
-    () => exercises.filter((e) => e.category === 'warmup').sort((a, b) => a.order - b.order),
+    () => exercises.filter((e) => e.category === 'warmup').sort((a, b) => a.id - b.id),
     [exercises],
   )
   const mainExercises = useMemo(
-    () =>
-      exercises
-        .filter((e) => e.category === workoutKey)
-        .sort((a, b) => a.order - b.order),
+    () => exercises.filter((e) => e.category === workoutKey).sort((a, b) => a.id - b.id),
     [exercises, workoutKey],
   )
 
-  function handleSetLogged(exerciseKey: string, restSec: number, isWarmup: boolean, isNewPr: boolean) {
+  function handleSetLogged(exerciseId: number, restSec: number, isWarmup: boolean, isNewPr: boolean) {
     if (isNewPr) {
-      setNewPrKeys((prev) => ({ ...prev, [exerciseKey]: true }))
+      setNewPrIds((prev) => ({ ...prev, [exerciseId]: true }))
     }
     if (!isWarmup && restSec > 0) {
       setRestTimer((prev) => ({ key: (prev?.key ?? 0) + 1, durationSec: restSec }))
@@ -204,12 +210,12 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
         <Section title="Warm-up">
           {warmupExercises.map((ex) => (
             <ExerciseLogCard
-              key={ex.key}
+              key={ex.id}
               exercise={ex}
               sessionId={sessionId}
-              loggedSets={loggedSets.filter((s) => s.exercise_key === ex.key)}
-              isNewPr={Boolean(newPrKeys[ex.key])}
-              onLogged={(isNewPr) => handleSetLogged(ex.key, ex.rest_sec, true, isNewPr)}
+              loggedSets={loggedSets.filter((s) => s.exercise_id === ex.id)}
+              isNewPr={Boolean(newPrIds[ex.id])}
+              onLogged={(isNewPr) => handleSetLogged(ex.id, ex.rest_sec, true, isNewPr)}
             />
           ))}
         </Section>
@@ -224,12 +230,12 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
           <Section title={WORKOUT_LABELS[workoutKey]}>
             {mainExercises.map((ex) => (
               <ExerciseLogCard
-                key={ex.key}
+                key={ex.id}
                 exercise={ex}
                 sessionId={sessionId}
-                loggedSets={loggedSets.filter((s) => s.exercise_key === ex.key)}
-                isNewPr={Boolean(newPrKeys[ex.key])}
-                onLogged={(isNewPr) => handleSetLogged(ex.key, ex.rest_sec, false, isNewPr)}
+                loggedSets={loggedSets.filter((s) => s.exercise_id === ex.id)}
+                isNewPr={Boolean(newPrIds[ex.id])}
+                onLogged={(isNewPr) => handleSetLogged(ex.id, ex.rest_sec, false, isNewPr)}
               />
             ))}
           </Section>
@@ -252,6 +258,13 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
+function targetLabel(exercise: Exercise): string {
+  if (exercise.type === 'time') {
+    return `target ${exercise.sets}×${exercise.duration_sec ?? '?'}s`
+  }
+  return `target ${exercise.sets}×${exercise.reps ?? '?'}`
+}
+
 function ExerciseLogCard({
   exercise,
   sessionId,
@@ -260,8 +273,8 @@ function ExerciseLogCard({
   onLogged,
 }: {
   exercise: Exercise
-  sessionId: string
-  loggedSets: SetLog[]
+  sessionId: number
+  loggedSets: SessionSetDetail[]
   isNewPr: boolean
   onLogged: (isNewPr: boolean) => void
 }) {
@@ -270,23 +283,21 @@ function ExerciseLogCard({
   const [weight, setWeight] = useState('')
   const [reps, setReps] = useState('')
   const [durationSec, setDurationSec] = useState('')
-  const [side, setSide] = useState<'left' | 'right'>('left')
 
   const setCount = loggedSets.length
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     const payload =
-      exercise.log_type === 'time'
-        ? { sessionId, exercise_key: exercise.key, duration_sec: Number(durationSec) || 0 }
+      exercise.type === 'time'
+        ? { sessionId, exercise_id: exercise.id, duration_sec: Number(durationSec) || 0 }
         : {
             sessionId,
-            exercise_key: exercise.key,
-            weight: weight ? Number(weight) : undefined,
+            exercise_id: exercise.id,
+            weight_kg: weight ? Number(weight) : undefined,
             reps: reps ? Number(reps) : undefined,
           }
-    const withSide = exercise.per_side ? { ...payload, side } : payload
-    const result = await logSet.mutateAsync(withSide)
+    const result = await logSet.mutateAsync(payload)
     onLogged(result.is_new_pr)
     setDurationSec('')
   }
@@ -297,8 +308,8 @@ function ExerciseLogCard({
         <div>
           <h3 className="text-[16px] font-semibold text-ink">{exercise.name}</h3>
           <p className="text-[12px] text-ink-tertiary">
-            {setCount} set{setCount === 1 ? '' : 's'} logged
-            {exercise.target_sets ? ` · target ${exercise.target_sets}×${exercise.target_reps ?? ''}` : ''}
+            {setCount} set{setCount === 1 ? '' : 's'} logged · {targetLabel(exercise)}
+            {exercise.per_side ? ' per side' : ''}
           </p>
         </div>
         {isNewPr && <Badge tone="positive">New PR!</Badge>}
@@ -323,23 +334,7 @@ function ExerciseLogCard({
       )}
 
       <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2">
-        {exercise.per_side && (
-          <div className="flex overflow-hidden rounded-[var(--radius-control)] border border-border">
-            {(['left', 'right'] as const).map((s) => (
-              <button
-                type="button"
-                key={s}
-                onClick={() => setSide(s)}
-                className={`tap-target px-3 text-[13px] font-medium capitalize ${
-                  side === s ? 'bg-accent-soft text-accent-strong' : 'text-ink-secondary'
-                }`}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        )}
-        {exercise.log_type === 'time' ? (
+        {exercise.type === 'time' ? (
           <Input
             aria-label="Duration (seconds)"
             type="number"
@@ -375,24 +370,27 @@ function ExerciseLogCard({
           Log set
         </Button>
       </form>
+      {exercise.per_side && (
+        <p className="text-[12px] text-ink-tertiary">
+          Log one set per side — alternate left and right as you go.
+        </p>
+      )}
     </Card>
   )
 }
 
-function CardioForm({ sessionId }: { sessionId: string }) {
+function CardioForm({ sessionId }: { sessionId: number }) {
   const logCardio = useLogCardio()
   const [durationMin, setDurationMin] = useState('')
   const [distanceKm, setDistanceKm] = useState('')
-  const [notes, setNotes] = useState('')
   const [logged, setLogged] = useState(false)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     await logCardio.mutateAsync({
       sessionId,
-      duration_min: Number(durationMin) || 0,
-      distance_km: distanceKm ? Number(distanceKm) : undefined,
-      notes: notes || undefined,
+      duration_sec: Math.round((Number(durationMin) || 0) * 60),
+      distance_km: Number(distanceKm) || 0,
     })
     setLogged(true)
   }
@@ -416,7 +414,6 @@ function CardioForm({ sessionId }: { sessionId: string }) {
             onChange={(e) => setDistanceKm(e.target.value)}
           />
         </div>
-        <Input label="Notes" type="text" value={notes} onChange={(e) => setNotes(e.target.value)} />
         <Button type="submit" disabled={logCardio.isPending}>
           {logCardio.isPending ? 'Logging…' : 'Log cardio'}
         </Button>

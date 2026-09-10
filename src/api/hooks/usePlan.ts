@@ -10,10 +10,15 @@ export function usePlan(from: string, to: string) {
   })
 }
 
+export interface SetPlanInput {
+  date: string
+  workout_key: WorkoutKey
+}
+
 export function useSetPlan() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (entry: PlanEntry) => api.post<PlanEntry>('/plan', entry),
+    mutationFn: (entry: SetPlanInput) => api.post<PlanEntry>('/plan', entry),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plan'] })
     },

@@ -5,21 +5,19 @@ import { Card } from '../components/ui/Card'
 import { formatShortDate } from '../lib/date'
 
 const WORKOUT_LABELS: Record<WorkoutKey, string> = {
-  a: 'Workout A',
-  b: 'Workout B',
-  c: 'Workout C',
+  A: 'Workout A',
+  B: 'Workout B',
+  C: 'Workout C',
   cardio: 'Cardio',
+  rest: 'Rest',
+  custom: 'Custom',
 }
 
 /** Deterministic person-tone assignment (hash of user_id -> two muted
  * tones), so the same person always renders the same color across
  * refreshes without a fixed "who is who" concept. */
-function toneFor(userId: string): 'personA' | 'personB' {
-  let hash = 0
-  for (let i = 0; i < userId.length; i++) {
-    hash = (hash * 31 + userId.charCodeAt(i)) | 0
-  }
-  return Math.abs(hash) % 2 === 0 ? 'personA' : 'personB'
+function toneFor(userId: number): 'personA' | 'personB' {
+  return Math.abs(userId) % 2 === 0 ? 'personA' : 'personB'
 }
 
 export function Together() {
@@ -53,18 +51,19 @@ export function Together() {
 function PersonCard({ entry, tone }: { entry: TogetherEntry; tone: 'personA' | 'personB' }) {
   const borderClass = tone === 'personA' ? 'border-l-4 border-l-person-a' : 'border-l-4 border-l-person-b'
   const avatarClass = tone === 'personA' ? 'bg-person-a-soft text-person-a-text' : 'bg-person-b-soft text-person-b-text'
+  const done = entry.today_status === 'done'
 
   return (
     <Card className={`flex flex-col gap-3 ${borderClass}`}>
       <div className="flex items-center gap-3">
         <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold ${avatarClass}`}>
-          {entry.name.slice(0, 1).toUpperCase()}
+          {entry.display_name.slice(0, 1).toUpperCase()}
         </div>
         <div className="flex-1">
-          <p className="text-[15px] font-semibold text-ink">{entry.name}</p>
+          <p className="text-[15px] font-semibold text-ink">{entry.display_name}</p>
           <p className="text-[12px] text-ink-tertiary">{entry.session_count} sessions total</p>
         </div>
-        {entry.today_done ? (
+        {done ? (
           <Badge tone="positive">
             <CheckIcon /> Done today
           </Badge>
@@ -78,7 +77,7 @@ function PersonCard({ entry, tone }: { entry: TogetherEntry; tone: 'personA' | '
       <div className="rounded-[var(--radius-control)] bg-surface-alt px-3 py-2">
         <p className="text-[12px] text-ink-tertiary">Today's plan</p>
         <p className="text-[14px] font-medium text-ink">
-          {entry.today_plan ? WORKOUT_LABELS[entry.today_plan] : 'Nothing scheduled'}
+          {entry.today_plan ? WORKOUT_LABELS[entry.today_plan.workout_key] : 'Nothing scheduled'}
         </p>
       </div>
 
@@ -87,12 +86,10 @@ function PersonCard({ entry, tone }: { entry: TogetherEntry; tone: 'personA' | '
           <p className="text-[12px] text-ink-tertiary">Last session</p>
           <p className="text-[14px] font-medium text-ink">
             {WORKOUT_LABELS[entry.last_session.workout_key]}
-            {entry.last_session.total_volume !== null &&
-              ` · ${Math.round(entry.last_session.total_volume)} kg`}
+            {entry.last_session.total_volume_kg !== null &&
+              ` · ${Math.round(entry.last_session.total_volume_kg)} kg`}
           </p>
-          {entry.last_session.finished_at && (
-            <p className="text-[12px] text-ink-tertiary">{formatShortDate(entry.last_session.finished_at)}</p>
-          )}
+          <p className="text-[12px] text-ink-tertiary">{formatShortDate(entry.last_session.date)}</p>
         </div>
       )}
     </Card>

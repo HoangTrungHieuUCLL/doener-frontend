@@ -13,8 +13,8 @@ interface AuthState {
 interface AuthContextValue extends AuthState {
   isAuthenticated: boolean
   isBootstrapping: boolean
-  login: (email: string, password: string) => Promise<void>
-  signup: (name: string, email: string, password: string) => Promise<void>
+  login: (username: string, password: string) => Promise<void>
+  signup: (username: string, password: string, displayName: string) => Promise<void>
   logout: () => void
   authError: string | null
   clearAuthError: () => void
@@ -79,15 +79,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [setAuth])
 
   const login = useCallback(
-    async (email: string, password: string) => {
+    async (username: string, password: string) => {
       setAuthError(null)
       try {
         const res = await api.post<AuthResponse>(
           '/auth/login',
-          { email, password },
+          { username, password },
           { skipAuth: true },
         )
-        setAuth({ token: res.token, user: res.user })
+        setAuth({ token: res.access_token, user: res.user })
       } catch (err) {
         const message = err instanceof ApiError ? err.message : 'Could not log in. Try again.'
         setAuthError(message)
@@ -98,15 +98,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const signup = useCallback(
-    async (name: string, email: string, password: string) => {
+    async (username: string, password: string, displayName: string) => {
       setAuthError(null)
       try {
         const res = await api.post<AuthResponse>(
           '/auth/signup',
-          { name, email, password },
+          { username, password, display_name: displayName },
           { skipAuth: true },
         )
-        setAuth({ token: res.token, user: res.user })
+        setAuth({ token: res.access_token, user: res.user })
       } catch (err) {
         const message = err instanceof ApiError ? err.message : 'Could not sign up. Try again.'
         setAuthError(message)

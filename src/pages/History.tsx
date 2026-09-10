@@ -1,17 +1,17 @@
 import { useState } from 'react'
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { useSessionsList } from '../api/hooks/useSessions'
+import { PAGE_SIZE, useSessionsList } from '../api/hooks/useSessions'
 import { usePrStats, useVolumeStats } from '../api/hooks/useStats'
-import type { WorkoutKey } from '../api/types'
+import type { SessionWorkoutKey } from '../api/types'
 import { Badge } from '../components/ui/Badge'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { formatShortDate } from '../lib/date'
 
-const WORKOUT_LABELS: Record<WorkoutKey, string> = {
-  a: 'Workout A',
-  b: 'Workout B',
-  c: 'Workout C',
+const WORKOUT_LABELS: Record<SessionWorkoutKey, string> = {
+  A: 'Workout A',
+  B: 'Workout B',
+  C: 'Workout C',
   cardio: 'Cardio',
 }
 
@@ -71,7 +71,7 @@ function VolumeChart() {
                 />
                 <Line
                   type="monotone"
-                  dataKey="volume"
+                  dataKey="total_volume_kg"
                   stroke="var(--color-accent-strong)"
                   strokeWidth={2.5}
                   dot={{ r: 3, fill: 'var(--color-accent-strong)' }}
@@ -99,15 +99,12 @@ function PrList() {
       ) : (
         <div className="flex flex-col gap-2">
           {data.map((pr) => (
-            <Card key={pr.exercise_key} className="flex items-center justify-between py-3">
+            <Card key={pr.exercise_id} className="flex items-center justify-between py-3">
               <div>
                 <p className="text-[14px] font-medium text-ink">{pr.exercise_name}</p>
                 <p className="text-[12px] text-ink-tertiary">{formatShortDate(pr.achieved_at)}</p>
               </div>
-              <Badge tone="accent">
-                {pr.value}
-                {pr.unit === 'kg' ? ' kg' : ' s'}
-              </Badge>
+              <Badge tone="accent">{pr.best_weight_kg} kg</Badge>
             </Card>
           ))}
         </div>
@@ -121,7 +118,7 @@ function SessionList() {
   const { data, isLoading, isPlaceholderData } = useSessionsList(page)
 
   const items = data?.items ?? []
-  const hasMore = data ? page * data.page_size < data.total : false
+  const hasMore = data ? page * PAGE_SIZE < data.total : false
 
   return (
     <section className="flex flex-col gap-3">
@@ -141,9 +138,9 @@ function SessionList() {
                   {!s.finished_at && ' · in progress'}
                 </p>
               </div>
-              {s.total_volume !== null && (
+              {s.total_volume_kg !== null && (
                 <span className="text-[14px] font-semibold tabular-nums text-ink-secondary">
-                  {Math.round(s.total_volume)} kg
+                  {Math.round(s.total_volume_kg)} kg
                 </span>
               )}
             </Card>

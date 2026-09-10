@@ -5,13 +5,17 @@ import { Card } from '../components/ui/Card'
 import { addDays, formatDayLabel, toISODate, todayISO } from '../lib/date'
 
 const WORKOUT_LABELS: Record<WorkoutKey, string> = {
-  a: 'Workout A',
-  b: 'Workout B',
-  c: 'Workout C',
+  A: 'Workout A',
+  B: 'Workout B',
+  C: 'Workout C',
   cardio: 'Cardio',
+  rest: 'Rest',
+  custom: 'Custom',
 }
 
-const WORKOUT_OPTIONS: WorkoutKey[] = ['a', 'b', 'c', 'cardio']
+// Only these are offered from the Plan UI; "rest"/"custom" exist in the
+// backend's WorkoutKey but aren't part of this app's assignable options.
+const WORKOUT_OPTIONS: WorkoutKey[] = ['A', 'B', 'C', 'cardio']
 
 export function Plan() {
   const days = useMemo(() => {

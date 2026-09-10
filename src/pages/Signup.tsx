@@ -9,8 +9,8 @@ import { LogoMark } from '../components/icons'
 export function Signup() {
   const { signup, authError, clearAuthError } = useAuth()
   const navigate = useNavigate()
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
+  const [displayName, setDisplayName] = useState('')
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -19,7 +19,7 @@ export function Signup() {
     clearAuthError()
     setSubmitting(true)
     try {
-      await signup(name, email, password)
+      await signup(username, password, displayName)
       navigate('/today', { replace: true })
     } catch {
       // authError is surfaced via context
@@ -39,22 +39,22 @@ export function Signup() {
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input
-            id="name"
-            label="Name"
+            id="displayName"
+            label="Display name"
             type="text"
             autoComplete="name"
             required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
           />
           <Input
-            id="email"
-            label="Email"
-            type="email"
-            autoComplete="email"
+            id="username"
+            label="Username"
+            type="text"
+            autoComplete="username"
             required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
           />
           <Input
             id="password"
