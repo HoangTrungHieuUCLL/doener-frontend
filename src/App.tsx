@@ -8,6 +8,7 @@ import { Signup } from './pages/Signup'
 import { Today } from './pages/Today'
 import { Plan } from './pages/Plan'
 import { History } from './pages/History'
+import { Insights } from './pages/Insights'
 import { Together } from './pages/Together'
 
 const queryClient = new QueryClient({
@@ -35,6 +36,7 @@ export default function App() {
                 <Route path="/today" element={<Today />} />
                 <Route path="/plan" element={<Plan />} />
                 <Route path="/history" element={<History />} />
+                <Route path="/insights" element={<Insights />} />
                 <Route path="/together" element={<Together />} />
               </Route>
             </Route>

@@ -1,7 +1,7 @@
 import type { ComponentType, SVGProps } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
-import { HistoryIcon, LogoMark, PlanIcon, TodayIcon, TogetherIcon } from './icons'
+import { HistoryIcon, InsightsIcon, LogoMark, PlanIcon, TodayIcon, TogetherIcon } from './icons'
 
 interface NavItem {
   to: string
@@ -13,6 +13,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/today', label: 'Today', Icon: TodayIcon },
   { to: '/plan', label: 'Plan', Icon: PlanIcon },
   { to: '/history', label: 'History', Icon: HistoryIcon },
+  { to: '/insights', label: 'Insights', Icon: InsightsIcon },
   { to: '/together', label: 'Together', Icon: TogetherIcon },
 ]
 

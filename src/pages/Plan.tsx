@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react'
 import { usePlan, useSetPlan } from '../api/hooks/usePlan'
 import type { WorkoutKey } from '../api/types'
 import { Card } from '../components/ui/Card'
-import { addDays, formatDayLabel, toISODate, todayISO } from '../lib/date'
+import { Calendar } from '../components/ui/Calendar'
+import { formatDayLabel, monthDates, todayISO } from '../lib/date'
 
 const WORKOUT_LABELS: Record<WorkoutKey, string> = {
   A: 'Workout A',
@@ -13,20 +14,28 @@ const WORKOUT_LABELS: Record<WorkoutKey, string> = {
   custom: 'Custom',
 }
 
+const WORKOUT_DOT: Record<WorkoutKey, string> = {
+  A: 'bg-accent',
+  B: 'bg-positive',
+  C: 'bg-person-b',
+  cardio: 'bg-negative',
+  rest: 'bg-ink-tertiary',
+  custom: 'bg-ink-tertiary',
+}
+
 // Only these are offered from the Plan UI; "rest"/"custom" exist in the
 // backend's WorkoutKey but aren't part of this app's assignable options.
 const WORKOUT_OPTIONS: WorkoutKey[] = ['A', 'B', 'C', 'cardio']
 
 export function Plan() {
-  const days = useMemo(() => {
-    const base = new Date()
-    return Array.from({ length: 7 }, (_, i) => toISODate(addDays(base, i)))
-  }, [])
-  const from = days[0]
-  const to = days[days.length - 1]
+  const [month, setMonth] = useState(() => new Date())
+  const [selectedDay, setSelectedDay] = useState(todayISO())
+
+  const dates = useMemo(() => monthDates(month), [month])
+  const from = dates[0]
+  const to = dates[dates.length - 1]
   const { data: planEntries, isLoading } = usePlan(from, to)
   const setPlan = useSetPlan()
-  const [editingDay, setEditingDay] = useState<string | null>(null)
 
   const planByDate = useMemo(() => {
     const map: Record<string, WorkoutKey> = {}
@@ -38,76 +47,57 @@ export function Plan() {
 
   async function assign(date: string, workoutKey: WorkoutKey) {
     await setPlan.mutateAsync({ date, workout_key: workoutKey })
-    setEditingDay(null)
   }
 
-  const today = todayISO()
+  const assignedForSelected = planByDate[selectedDay]
 
   return (
     <div className="flex flex-col gap-6">
       <header>
         <h1 className="text-[24px] font-semibold text-ink">Plan</h1>
-        <p className="text-[14px] text-ink-secondary">This week — tap a day to assign a workout.</p>
+        <p className="text-[14px] text-ink-secondary">Tap a day, then pick a workout.</p>
       </header>
 
       {isLoading ? (
         <p className="text-center text-ink-tertiary">Loading…</p>
       ) : (
-        <div className="flex flex-col gap-3">
-          {days.map((date) => {
-            const assigned = planByDate[date]
-            const isToday = date === today
-            const isEditing = editingDay === date
-            return (
-              <Card key={date} className={isToday ? 'border-accent' : ''}>
-                <button
-                  onClick={() => setEditingDay(isEditing ? null : date)}
-                  className="tap-target flex w-full items-center justify-between text-left"
-                >
-                  <div>
-                    <p className="text-[15px] font-semibold text-ink">
-                      {formatDayLabel(date)}
-                      {isToday && <span className="ml-2 text-[12px] font-medium text-accent-strong">Today</span>}
-                    </p>
-                    <p className="text-[13px] text-ink-secondary">
-                      {assigned ? WORKOUT_LABELS[assigned] : 'No workout assigned'}
-                    </p>
-                  </div>
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    className={`text-ink-tertiary transition-transform ${isEditing ? 'rotate-180' : ''}`}
-                  >
-                    <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
+        <>
+          <Card>
+            <Calendar
+              month={month}
+              onMonthChange={setMonth}
+              selected={selectedDay}
+              onSelectDay={setSelectedDay}
+              renderDay={(iso) => {
+                const key = planByDate[iso]
+                return key ? <span className={`h-1.5 w-1.5 rounded-full ${WORKOUT_DOT[key]}`} /> : null
+              }}
+            />
+          </Card>
 
-                {isEditing && (
-                  <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border pt-3 sm:grid-cols-4">
-                    {WORKOUT_OPTIONS.map((key) => (
-                      <button
-                        key={key}
-                        onClick={() => assign(date, key)}
-                        disabled={setPlan.isPending}
-                        className={`tap-target rounded-[var(--radius-control)] border px-3 py-2 text-[13px] font-medium ${
-                          assigned === key
-                            ? 'border-accent bg-accent-soft text-accent-strong'
-                            : 'border-border text-ink-secondary'
-                        }`}
-                      >
-                        {WORKOUT_LABELS[key]}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </Card>
-            )
-          })}
-        </div>
+          <Card>
+            <p className="text-[15px] font-semibold text-ink">{formatDayLabel(selectedDay)}</p>
+            <p className="mb-3 text-[13px] text-ink-secondary">
+              {assignedForSelected ? WORKOUT_LABELS[assignedForSelected] : 'No workout assigned'}
+            </p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {WORKOUT_OPTIONS.map((key) => (
+                <button
+                  key={key}
+                  onClick={() => assign(selectedDay, key)}
+                  disabled={setPlan.isPending}
+                  className={`tap-target rounded-[var(--radius-control)] border px-3 py-2 text-[13px] font-medium ${
+                    assignedForSelected === key
+                      ? 'border-accent bg-accent-soft text-accent-strong'
+                      : 'border-border text-ink-secondary'
+                  }`}
+                >
+                  {WORKOUT_LABELS[key]}
+                </button>
+              ))}
+            </div>
+          </Card>
+        </>
       )}
     </div>
   )

@@ -121,6 +121,27 @@ export interface VolumePoint {
   session_id: number
   date: string
   total_volume_kg: number
+  workout_key: string
+}
+
+export interface LastSet {
+  exercise_id: number
+  weight_kg: number | null
+  reps: number | null
+  duration_sec: number | null
+}
+
+export interface ExerciseProgressPoint {
+  session_id: number
+  date: string
+  weight_kg: number | null
+  reps: number | null
+}
+
+export interface ConsistencyDay {
+  date: string
+  planned_key: WorkoutKey | null
+  done_key: WorkoutKey | null
 }
 
 export interface TodayPlan {

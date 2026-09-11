@@ -55,6 +55,14 @@ export function TogetherIcon(props: IconProps) {
   )
 }
 
+export function InsightsIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4 20V10M10 20V4M16 20v-7M20 20V13" />
+    </svg>
+  )
+}
+
 export function LogoMark(props: IconProps) {
   return (
     <svg {...base} viewBox="0 0 24 24" {...props}>

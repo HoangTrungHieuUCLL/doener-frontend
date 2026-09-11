@@ -35,3 +35,27 @@ export function formatShortDate(iso: string): string {
   if (Number.isNaN(date.getTime())) return iso
   return `${MONTH[date.getMonth()]} ${date.getDate()}`
 }
+
+export const MONTH_NAMES = MONTH
+export const WEEKDAY_NAMES = WEEKDAY
+
+/** First day (1st, local time) of the month containing `date`. */
+export function startOfMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), 1)
+}
+
+/** Number of days in the month containing `date`. */
+export function daysInMonth(date: Date): number {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+}
+
+export function addMonths(date: Date, months: number): Date {
+  return new Date(date.getFullYear(), date.getMonth() + months, 1)
+}
+
+/** All ISO dates in the calendar month containing `date`, in order. */
+export function monthDates(date: Date): string[] {
+  const first = startOfMonth(date)
+  const count = daysInMonth(date)
+  return Array.from({ length: count }, (_, i) => toISODate(addDays(first, i)))
+}

@@ -80,11 +80,18 @@ export function useLogCardio() {
   })
 }
 
+export interface FinishSessionInput {
+  sessionId: number
+  /** Wall-clock elapsed minus any paused time; omit to let the backend use wall-clock. */
+  duration_sec?: number
+}
+
 export function useFinishSession() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (sessionId: number) => api.post<Session>(`/sessions/${sessionId}/finish`),
-    onSuccess: (_data, sessionId) => {
+    mutationFn: ({ sessionId, duration_sec }: FinishSessionInput) =>
+      api.post<Session>(`/sessions/${sessionId}/finish`, duration_sec !== undefined ? { duration_sec } : undefined),
+    onSuccess: (_data, { sessionId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.session(sessionId) })
       queryClient.invalidateQueries({ queryKey: ['sessions'] })
       queryClient.invalidateQueries({ queryKey: ['stats'] })

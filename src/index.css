@@ -3,51 +3,55 @@
 @theme {
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
-  /* Neutral grey base */
-  --color-bg: #f6f6f4;
-  --color-surface: #ffffff;
-  --color-surface-alt: #eeeeec;
-  --color-border: #e1e0dc;
-  --color-border-strong: #c9c8c2;
+  /* Warm charcoal base -- not pure black (avoids the flat cold-neon-on-black
+     look) and softened white ink (avoids glow against a dark ground).
+     surface = elevated one step above bg, surface-alt = elevated further
+     (pickers, the day panel under the calendar). */
+  --color-bg: #16140f;
+  --color-surface: #201d17;
+  --color-surface-alt: #2a261e;
+  --color-border: #3a352a;
+  --color-border-strong: #4d4636;
 
-  --color-ink: #1c1d1f;
-  --color-ink-secondary: #55575c;
-  --color-ink-tertiary: #6d6f74;
-  --color-ink-placeholder: #a9abae;
+  --color-ink: #f2ede2;
+  --color-ink-secondary: #c9c2b0;
+  --color-ink-tertiary: #9c9483;
+  --color-ink-placeholder: #6b6455;
 
-  /* The one quiet accent: dusty slate-blue. `accent` is used for fills,
-     icons, borders and focus rings; `accent-strong` is a darker step of the
-     same hue reserved for anywhere text/icons need AA-safe contrast (button
-     labels, links) -- still a single accent hue, just two steps of it. */
-  --color-accent: #6e7c91;
-  --color-accent-strong: #55637a;
-  --color-accent-soft: #e7eaef;
+  /* The one accent: warm ember, not a neon fitness-app teal/green. `accent`
+     for fills/icons/borders/focus rings; `accent-strong` a lighter step of
+     the same hue for anywhere text/icons need AA-safe contrast against dark
+     surfaces -- still a single accent hue, just two steps of it. */
+  --color-accent: #d98e4a;
+  --color-accent-strong: #f0a75c;
+  --color-accent-soft: #3a2c1c;
 
   /* Status semantics (distinct hue from accent, used sparingly). The base
-     tone is used for fills/dots/icons; the darker "-text" step is what
-     actually renders as text so it clears 4.5:1 on light backgrounds. */
-  --color-positive: #7c9070;
-  --color-positive-text: #4f6b45;
-  --color-positive-soft: #ebeee6;
-  --color-negative: #b9645f;
-  --color-negative-text: #96453f;
-  --color-negative-soft: #f4e7e6;
+     tone is used for fills/dots/icons; the "-text" step is brightened to
+     clear 4.5:1 on dark backgrounds. */
+  --color-positive: #7ec488;
+  --color-positive-text: #9adba3;
+  --color-positive-soft: #1e2b20;
+  --color-negative: #e2726b;
+  --color-negative-text: #ec9791;
+  --color-negative-soft: #2e1c1a;
 
   /* Together view: two muted person tones (fills/borders/avatars). Each has
-     a darker "-text" step for anywhere the color needs to render as text. */
-  --color-person-a: #b98080;
-  --color-person-a-text: #8f5852;
-  --color-person-a-soft: #f4e9e9;
-  --color-person-b: #8fa888;
-  --color-person-b-text: #4c6a49;
-  --color-person-b-soft: #edf1ea;
+     a brightened "-text" step for anywhere the color needs to render as text
+     on a dark surface. */
+  --color-person-a: #cc9490;
+  --color-person-a-text: #e0b3b0;
+  --color-person-a-soft: #2c201f;
+  --color-person-b: #9db895;
+  --color-person-b-text: #bad2b2;
+  --color-person-b-soft: #1f2620;
 
   --radius-card: 1rem;
   --radius-control: 0.75rem;
 }
 
 html {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 body {
@@ -73,6 +77,17 @@ body {
 .tap-target {
   min-height: 44px;
   min-width: 44px;
+}
+
+/* Floating stat chip over a photo: a dark scrim regardless of theme, since
+   it sits on unpredictable image content, not a themed surface. Mirrors
+   HIG's "dimming layer behind clear/translucent controls over media"
+   guidance (materials.md). */
+.scrim-chip {
+  background: rgba(10, 9, 6, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #f2ede2;
 }
 
 input,

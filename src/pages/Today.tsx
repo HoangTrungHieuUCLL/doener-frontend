@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { useExercises } from '../api/hooks/useExercises'
 import { usePlan } from '../api/hooks/usePlan'
+import { useLastSets } from '../api/hooks/useStats'
 import {
   useFinishSession,
   useLogCardio,
@@ -9,14 +10,15 @@ import {
   useSession,
   useStartSession,
 } from '../api/hooks/useSessions'
-import type { Exercise, SessionSetDetail, SessionWorkoutKey } from '../api/types'
+import type { Exercise, LastSet, SessionSetDetail, SessionWorkoutKey } from '../api/types'
 import { RestTimer } from '../components/RestTimer'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Card } from '../components/ui/Card'
+import { ExerciseCard } from '../components/ui/ExerciseCard'
 import { todayISO } from '../lib/date'
-import { formatDuration, useStopwatch } from '../lib/useStopwatch'
+import { formatDuration, usePausableStopwatch } from '../lib/useStopwatch'
 import { useLocalStorageState } from '../lib/useLocalStorageState'
 
 const WORKOUT_LABELS: Record<SessionWorkoutKey, string> = {
@@ -154,10 +156,17 @@ interface ActiveSessionProps {
 }
 
 function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises }: ActiveSessionProps) {
-  const elapsed = useStopwatch(startedAt)
+  const { displaySec, activeSec, isPaused, toggle: togglePause } = usePausableStopwatch(startedAt)
   const finishSession = useFinishSession()
+  const { data: lastSets } = useLastSets()
   const [restTimer, setRestTimer] = useState<{ key: number; durationSec: number } | null>(null)
   const [newPrIds, setNewPrIds] = useState<Record<number, boolean>>({})
+
+  const lastSetByExercise = useMemo(() => {
+    const map: Record<number, LastSet> = {}
+    for (const s of lastSets ?? []) map[s.exercise_id] = s
+    return map
+  }, [lastSets])
 
   const warmupExercises = useMemo(
     () => exercises.filter((e) => e.category === 'warmup').sort((a, b) => a.id - b.id),
@@ -172,13 +181,13 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
     if (isNewPr) {
       setNewPrIds((prev) => ({ ...prev, [exerciseId]: true }))
     }
-    if (!isWarmup && restSec > 0) {
+    if (!isWarmup && restSec > 0 && !isPaused) {
       setRestTimer((prev) => ({ key: (prev?.key ?? 0) + 1, durationSec: restSec }))
     }
   }
 
   async function handleFinish() {
-    await finishSession.mutateAsync(sessionId)
+    await finishSession.mutateAsync({ sessionId, duration_sec: activeSec })
   }
 
   return (
@@ -186,11 +195,29 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-[24px] font-semibold text-ink">{WORKOUT_LABELS[workoutKey]}</h1>
-          <p className="text-[14px] text-ink-secondary">In progress</p>
+          <p className="text-[14px] text-ink-secondary">{isPaused ? 'Paused' : 'In progress'}</p>
         </div>
-        <div className="text-right">
-          <p className="text-[12px] uppercase tracking-wide text-ink-tertiary">Elapsed</p>
-          <p className="text-[22px] font-semibold tabular-nums text-ink">{formatDuration(elapsed)}</p>
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <p className="text-[12px] uppercase tracking-wide text-ink-tertiary">Elapsed</p>
+            <p className="text-[22px] font-semibold tabular-nums text-ink">{formatDuration(displaySec)}</p>
+          </div>
+          <button
+            type="button"
+            onClick={togglePause}
+            aria-label={isPaused ? 'Resume workout' : 'Pause workout'}
+            className="tap-target flex items-center justify-center rounded-full border border-border text-ink-secondary hover:bg-surface-alt"
+          >
+            {isPaused ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
+              </svg>
+            )}
+          </button>
         </div>
       </header>
 
@@ -210,6 +237,7 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
               exercise={ex}
               sessionId={sessionId}
               loggedSets={loggedSets.filter((s) => s.exercise_id === ex.id)}
+              lastSet={lastSetByExercise[ex.id] ?? null}
               isNewPr={Boolean(newPrIds[ex.id])}
               onLogged={(isNewPr) => handleSetLogged(ex.id, ex.rest_sec, true, isNewPr)}
             />
@@ -230,6 +258,7 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
                 exercise={ex}
                 sessionId={sessionId}
                 loggedSets={loggedSets.filter((s) => s.exercise_id === ex.id)}
+                lastSet={lastSetByExercise[ex.id] ?? null}
                 isNewPr={Boolean(newPrIds[ex.id])}
                 onLogged={(isNewPr) => handleSetLogged(ex.id, ex.rest_sec, false, isNewPr)}
               />
@@ -261,98 +290,137 @@ function targetLabel(exercise: Exercise): string {
   return `target ${exercise.sets}×${exercise.reps ?? '?'}`
 }
 
+function Stepper({
+  label,
+  value,
+  step,
+  min = 0,
+  onChange,
+}: {
+  label: string
+  value: number
+  step: number
+  min?: number
+  onChange: (next: number) => void
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <span className="text-[11px] uppercase tracking-wide text-ink-tertiary">{label}</span>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          aria-label={`Decrease ${label}`}
+          onClick={() => onChange(Math.max(min, round1(value - step)))}
+          className="tap-target flex items-center justify-center rounded-full border border-border text-ink-secondary hover:bg-surface-alt"
+        >
+          −
+        </button>
+        <span className="w-12 text-center text-[16px] font-semibold tabular-nums text-ink">{value}</span>
+        <button
+          type="button"
+          aria-label={`Increase ${label}`}
+          onClick={() => onChange(round1(value + step))}
+          className="tap-target flex items-center justify-center rounded-full border border-border text-ink-secondary hover:bg-surface-alt"
+        >
+          +
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function round1(n: number): number {
+  return Math.round(n * 10) / 10
+}
+
 function ExerciseLogCard({
   exercise,
   sessionId,
   loggedSets,
+  lastSet,
   isNewPr,
   onLogged,
 }: {
   exercise: Exercise
   sessionId: number
   loggedSets: SessionSetDetail[]
+  lastSet: LastSet | null
   isNewPr: boolean
   onLogged: (isNewPr: boolean) => void
 }) {
   const logSet = useLogSet()
-  const [weight, setWeight] = useState('')
-  const [reps, setReps] = useState('')
-  const [durationSec, setDurationSec] = useState('')
+  const [weight, setWeight] = useState(lastSet?.weight_kg ?? 20)
+  const [reps, setReps] = useState(lastSet?.reps ?? exercise.reps ?? 10)
+  const [durationSec, setDurationSec] = useState(lastSet?.duration_sec ?? exercise.duration_sec ?? 30)
+
+  // Re-seed once lastSet finishes loading (it starts null on first render).
+  useEffect(() => {
+    if (lastSet) {
+      if (lastSet.weight_kg !== null) setWeight(lastSet.weight_kg)
+      if (lastSet.reps !== null) setReps(lastSet.reps)
+      if (lastSet.duration_sec !== null) setDurationSec(lastSet.duration_sec)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastSet?.exercise_id])
 
   const setCount = loggedSets.length
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault()
+  async function logCurrentValues() {
     const payload =
       exercise.type === 'time'
-        ? { sessionId, exercise_id: exercise.id, duration_sec: Number(durationSec) || 0 }
+        ? { sessionId, exercise_id: exercise.id, duration_sec: durationSec }
+        : { sessionId, exercise_id: exercise.id, weight_kg: weight, reps }
+    const result = await logSet.mutateAsync(payload)
+    onLogged(result.is_new_pr)
+  }
+
+  async function repeatLastSet() {
+    if (!lastSet) return
+    const payload =
+      exercise.type === 'time'
+        ? { sessionId, exercise_id: exercise.id, duration_sec: lastSet.duration_sec ?? 0 }
         : {
             sessionId,
             exercise_id: exercise.id,
-            weight_kg: weight ? Number(weight) : undefined,
-            reps: reps ? Number(reps) : undefined,
+            weight_kg: lastSet.weight_kg ?? undefined,
+            reps: lastSet.reps ?? undefined,
           }
     const result = await logSet.mutateAsync(payload)
     onLogged(result.is_new_pr)
-    setDurationSec('')
   }
 
   return (
-    <Card className="flex flex-col gap-3">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-[16px] font-semibold text-ink">{exercise.name}</h3>
-          <p className="text-[12px] text-ink-tertiary">
-            {setCount} set{setCount === 1 ? '' : 's'} logged · {targetLabel(exercise)}
-            {exercise.per_side ? ' per side' : ''}
-          </p>
-        </div>
-        {isNewPr && <Badge tone="positive">New PR!</Badge>}
-      </div>
+    <div className="flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface">
+      <ExerciseCard
+        exerciseKey={exercise.key}
+        title={exercise.name}
+        subtitle={`${setCount} set${setCount === 1 ? '' : 's'} logged · ${targetLabel(exercise)}${exercise.per_side ? ' per side' : ''}`}
+        chip={isNewPr ? <Badge tone="positive">New PR!</Badge> : targetLabel(exercise)}
+        className="h-28"
+      />
 
-      <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2">
+      <div className="flex flex-wrap items-center justify-center gap-4 p-4">
         {exercise.type === 'time' ? (
-          <Input
-            aria-label="Duration (seconds)"
-            type="number"
-            inputMode="numeric"
-            placeholder="Seconds"
-            className="w-28"
-            value={durationSec}
-            onChange={(e) => setDurationSec(e.target.value)}
-          />
+          <Stepper label="Seconds" value={durationSec} step={5} onChange={setDurationSec} />
         ) : (
           <>
-            <Input
-              aria-label="Weight (kg)"
-              type="number"
-              inputMode="decimal"
-              placeholder="kg"
-              className="w-20"
-              value={weight}
-              onChange={(e) => setWeight(e.target.value)}
-            />
-            <Input
-              aria-label="Reps"
-              type="number"
-              inputMode="numeric"
-              placeholder="reps"
-              className="w-20"
-              value={reps}
-              onChange={(e) => setReps(e.target.value)}
-            />
+            <Stepper label="Kg" value={weight} step={2.5} onChange={setWeight} />
+            <Stepper label="Reps" value={reps} step={1} onChange={setReps} />
           </>
         )}
-        <Button type="submit" size="md" disabled={logSet.isPending}>
+      </div>
+
+      <div className="flex gap-2 px-4 pb-4">
+        {lastSet && (
+          <Button variant="secondary" size="md" onClick={repeatLastSet} disabled={logSet.isPending} className="flex-1">
+            Repeat last
+          </Button>
+        )}
+        <Button size="md" onClick={logCurrentValues} disabled={logSet.isPending} className="flex-1">
           Log set
         </Button>
-      </form>
-      {exercise.per_side && (
-        <p className="text-[12px] text-ink-tertiary">
-          Log one set per side — alternate left and right as you go.
-        </p>
-      )}
-    </Card>
+      </div>
+    </div>
   )
 }
 
