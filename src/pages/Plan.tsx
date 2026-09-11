@@ -101,7 +101,7 @@ export function Plan() {
   return (
     <div className="flex flex-col gap-6">
       <header>
-        <h1 className="font-serif text-[24px] font-semibold text-ink">Plan</h1>
+        <h1 className="font-display text-[24px] font-semibold text-ink">Plan</h1>
         <p className="text-[14px] text-ink-secondary">
           {multiSelect ? 'Tap days, then pick a workout for all of them.' : 'Tap a day, then pick a workout.'}
         </p>

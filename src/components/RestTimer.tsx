@@ -27,7 +27,7 @@ export function RestTimer({ restartKey, durationSec, onDismiss }: RestTimerProps
     <div className="flex items-center gap-3 rounded-[var(--radius-control)] border border-accent-soft bg-accent-soft px-4 py-3">
       <div className="relative h-11 w-11 shrink-0">
         <svg viewBox="0 0 44 44" className="h-11 w-11 -rotate-90">
-          <circle cx="22" cy="22" r="18" fill="none" stroke="#ffffff" strokeWidth="4" />
+          <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(32,18,41,0.1)" strokeWidth="4" />
           <circle
             cx="22"
             cy="22"

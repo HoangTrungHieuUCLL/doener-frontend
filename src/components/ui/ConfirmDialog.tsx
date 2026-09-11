@@ -25,7 +25,7 @@ export function ConfirmDialog({
       <div
         role="alertdialog"
         aria-modal="true"
-        className="animate-dialog-in w-full max-w-xs rounded-[var(--radius-card)] border border-border bg-surface p-5"
+        className="animate-dialog-in w-full max-w-xs rounded-[var(--radius-card)] border border-border bg-surface p-5 shadow-[var(--shadow-card)]"
         onClick={(e) => e.stopPropagation()}
       >
         <p className="text-[15px] font-semibold text-ink">{title}</p>

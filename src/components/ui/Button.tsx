@@ -10,7 +10,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses: Record<Variant, string> = {
-  primary: 'bg-accent-strong text-white active:opacity-90 disabled:opacity-40',
+  primary: 'gradient-brand text-white shadow-[var(--shadow-pop)] active:opacity-90 disabled:opacity-40 disabled:shadow-none',
   secondary:
     'bg-surface-alt text-ink border border-border active:bg-border disabled:opacity-40',
   ghost: 'bg-transparent text-ink-secondary active:bg-surface-alt disabled:opacity-40',
@@ -31,7 +31,7 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
-      className={`tap-target inline-flex items-center justify-center gap-2 rounded-[var(--radius-control)] font-medium transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.97] disabled:cursor-not-allowed disabled:active:scale-100 ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      className={`tap-target inline-flex items-center justify-center gap-2 rounded-[var(--radius-control)] font-semibold transition-[color,background-color,border-color,transform,box-shadow] duration-150 active:scale-[0.96] disabled:cursor-not-allowed disabled:active:scale-100 ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
       {...rest}
     >
       {children}

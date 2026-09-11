@@ -72,11 +72,11 @@ export function Calendar({
               key={iso}
               type="button"
               onClick={() => onSelectDay?.(iso)}
-              className={`tap-target flex aspect-square flex-col items-center justify-center gap-0.5 rounded-[var(--radius-control)] text-[13px] transition-colors ${
+              className={`tap-target flex aspect-square flex-col items-center justify-center gap-0.5 rounded-[var(--radius-control)] text-[13px] transition-[transform,background-color,color] active:scale-[0.94] ${
                 isSelected
-                  ? 'bg-accent text-white'
+                  ? 'gradient-brand text-white shadow-[var(--shadow-pop)]'
                   : isToday
-                    ? 'border border-accent text-ink'
+                    ? 'border-2 border-accent text-ink font-semibold'
                     : 'text-ink hover:bg-surface-alt'
               }`}
             >

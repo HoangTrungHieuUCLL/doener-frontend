@@ -25,20 +25,21 @@ export function AppShell() {
   return (
     <div className="flex min-h-dvh w-full flex-col md:flex-row">
       {/* Desktop sidebar */}
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-surface px-4 py-6 md:flex">
-        <div className="mb-8 flex items-center gap-2 px-2 text-ink">
-          <LogoMark className="h-7 w-7 text-accent" />
-          <span className="font-serif text-[17px] font-semibold">Doener</span>
+      <aside className="relative hidden w-60 shrink-0 flex-col overflow-hidden border-r border-border bg-surface px-4 py-6 md:flex">
+        <div className="brand-blob pointer-events-none absolute -left-16 -top-20 h-52 w-52 rounded-full" />
+        <div className="relative mb-8 flex items-center gap-2 px-2 text-ink">
+          <LogoMark className="h-7 w-7" />
+          <span className="font-display text-[18px] font-semibold">Doener</span>
         </div>
-        <nav className="flex flex-1 flex-col gap-1">
+        <nav className="relative flex flex-1 flex-col gap-1">
           {NAV_ITEMS.map(({ to, label, Icon }) => (
             <NavLink
               key={to}
               to={to}
               className={({ isActive }) =>
-                `tap-target flex items-center gap-3 rounded-[var(--radius-control)] px-3 text-[15px] font-medium transition-colors ${
+                `tap-target flex items-center gap-3 rounded-[var(--radius-control)] px-3 text-[15px] font-medium transition-[background-color,color,box-shadow] ${
                   isActive
-                    ? 'bg-accent-soft text-accent-strong'
+                    ? 'gradient-brand text-white shadow-[var(--shadow-pop)]'
                     : 'text-ink-secondary hover:bg-surface-alt'
                 }`
               }
@@ -63,8 +64,8 @@ export function AppShell() {
       <div className="flex min-h-dvh flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-border bg-surface px-4 py-3 md:hidden">
           <div className="flex items-center gap-2 text-ink">
-            <LogoMark className="h-6 w-6 text-accent" />
-            <span className="font-serif text-[17px] font-semibold">Doener</span>
+            <LogoMark className="h-6 w-6" />
+            <span className="font-display text-[18px] font-semibold">Doener</span>
           </div>
           <button
             onClick={logout}
@@ -87,8 +88,8 @@ export function AppShell() {
               key={to}
               to={to}
               className={({ isActive }) =>
-                `tap-target flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium ${
-                  isActive ? 'text-accent-strong' : 'text-ink-tertiary'
+                `tap-target flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium transition-colors ${
+                  isActive ? 'text-accent' : 'text-ink-tertiary'
                 }`
               }
             >

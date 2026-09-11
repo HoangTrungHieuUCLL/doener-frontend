@@ -19,7 +19,7 @@ export function Insights() {
   return (
     <div className="flex flex-col gap-8">
       <header>
-        <h1 className="font-serif text-[24px] font-semibold text-ink">Insights</h1>
+        <h1 className="font-display text-[24px] font-semibold text-ink">Insights</h1>
         <p className="text-[14px] text-ink-secondary">Deeper trends behind the numbers.</p>
       </header>
 

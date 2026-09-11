@@ -30,11 +30,13 @@ export function Login() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-bg px-5">
-      <div className="w-full max-w-sm">
+    <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-bg px-5">
+      <div className="brand-blob pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full" />
+      <div className="brand-blob pointer-events-none absolute -bottom-28 -right-20 h-80 w-80 rounded-full" />
+      <div className="relative w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-2">
-          <LogoMark className="h-10 w-10 text-accent" />
-          <h1 className="font-serif text-[22px] font-semibold text-ink">Doener</h1>
+          <LogoMark className="h-12 w-12" />
+          <h1 className="font-display text-[24px] font-semibold text-ink">Doener</h1>
           <p className="text-[14px] text-ink-secondary">Log in to keep your streak going.</p>
         </div>
 

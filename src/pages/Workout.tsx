@@ -56,7 +56,7 @@ export function Workout() {
   return (
     <div className="flex flex-col gap-8">
       <header>
-        <h1 className="font-serif text-[24px] font-semibold text-ink">Workout</h1>
+        <h1 className="font-display text-[24px] font-semibold text-ink">Workout</h1>
         <p className="text-[14px] text-ink-secondary">Every exercise, how to do it, and what to watch for.</p>
       </header>
 

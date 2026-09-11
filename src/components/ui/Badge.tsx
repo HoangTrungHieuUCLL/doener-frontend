@@ -4,7 +4,7 @@ type Tone = 'neutral' | 'accent' | 'positive' | 'negative' | 'personA' | 'person
 
 const toneClasses: Record<Tone, string> = {
   neutral: 'bg-surface-alt text-ink-secondary',
-  accent: 'bg-accent-soft text-accent-strong',
+  accent: 'gradient-brand text-white',
   positive: 'bg-positive-soft text-positive-text',
   negative: 'bg-negative-soft text-negative-text',
   personA: 'bg-person-a-soft text-person-a-text',

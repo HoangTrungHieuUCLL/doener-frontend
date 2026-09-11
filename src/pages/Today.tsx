@@ -59,7 +59,7 @@ export function Today() {
     return (
       <div className="flex flex-col items-center gap-8 pt-8 text-center">
         <header>
-          <h1 className="font-serif text-[24px] font-semibold text-ink">Today</h1>
+          <h1 className="font-display text-[24px] font-semibold text-ink">Today</h1>
           {!plannedKey && (
             <p className="text-[14px] text-ink-secondary">
               Nothing planned for today — head to Plan to assign a workout.
@@ -106,7 +106,7 @@ function StartButton({ label, onStart }: { label: string; onStart: () => void })
       type="button"
       onClick={() => setActive((a) => !a)}
       aria-label={active ? 'Cancel start' : label}
-      className="relative flex h-64 w-64 max-h-[75vw] max-w-[75vw] items-center justify-center rounded-full bg-accent-strong p-6 text-center text-white transition-transform active:scale-[0.97]"
+      className="relative flex h-64 w-64 max-h-[75vw] max-w-[75vw] items-center justify-center rounded-full gradient-brand p-6 text-center text-white shadow-[var(--shadow-pop)] transition-transform active:scale-[0.97]"
     >
       <svg className="absolute inset-0 -rotate-90" viewBox="0 0 120 120">
         <circle cx="60" cy="60" r={radius} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="5" />
@@ -141,19 +141,19 @@ function FinishedSummary({
 }) {
   return (
     <div className="flex flex-col items-center gap-5 py-10 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-positive-soft text-positive-text">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <div className="animate-pop-in flex h-20 w-20 items-center justify-center rounded-full gradient-brand text-white shadow-[var(--shadow-pop)]">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </div>
       <div>
-        <h1 className="font-serif text-[22px] font-semibold text-ink">Workout complete</h1>
+        <h1 className="font-display text-[22px] font-semibold text-ink">Workout complete</h1>
         <p className="text-[14px] text-ink-secondary">{WORKOUT_LABELS[session.workout_key]} is in the books.</p>
       </div>
       {session.total_volume_kg !== null && (
         <Card className="w-full max-w-xs">
           <p className="text-[13px] text-ink-tertiary">Total volume</p>
-          <p className="text-[28px] font-semibold text-ink">{Math.round(session.total_volume_kg)} kg</p>
+          <p className="font-display text-[28px] font-semibold text-gradient-brand">{Math.round(session.total_volume_kg)} kg</p>
         </Card>
       )}
       <Button onClick={onStartNew}>Back to Today</Button>
@@ -239,7 +239,7 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
     <div className="flex flex-col gap-6 pb-6">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="font-serif text-[24px] font-semibold text-ink">{WORKOUT_LABELS[workoutKey]}</h1>
+          <h1 className="font-display text-[24px] font-semibold text-ink">{WORKOUT_LABELS[workoutKey]}</h1>
           <p className="text-[14px] text-ink-secondary">{isPaused ? 'Paused' : 'In progress'}</p>
         </div>
         <div className="flex items-center gap-3">
@@ -359,7 +359,7 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
           </div>
           <div className="h-1 w-full overflow-hidden rounded-full bg-surface-alt">
             <div
-              className="h-full rounded-full bg-accent transition-all"
+              className="h-full rounded-full gradient-brand transition-all"
               style={{ width: `${((currentIndex + 1) / queue.length) * 100}%` }}
             />
           </div>

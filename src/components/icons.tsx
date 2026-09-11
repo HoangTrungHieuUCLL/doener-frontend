@@ -1,4 +1,5 @@
 // Small inline icon set (no external icon dependency) used by navigation.
+import { useId } from 'react'
 import type { SVGProps } from 'react'
 
 type IconProps = SVGProps<SVGSVGElement>
@@ -62,21 +63,32 @@ export function InsightsIcon(props: IconProps) {
   )
 }
 
-/** A döner kebab cone on a vertical spit -- meat stack lightly filled,
- * layer lines across it, skewer running through top to bottom. */
+/** A döner kebab cone on a vertical spit -- meat stack filled with the
+ * brand gradient, layer lines across it, skewer running through top to
+ * bottom. Each instance gets its own gradient id (via useId) since several
+ * copies can be in the DOM at once (desktop + mobile nav). */
 export function LogoMark(props: IconProps) {
+  const gradientId = `logo-gradient-${useId()}`
   return (
     <svg {...base} viewBox="0 0 24 24" {...props}>
+      <defs>
+        <linearGradient id={gradientId} x1="4" y1="2.5" x2="20" y2="19" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#E61A66" />
+          <stop offset="1" stopColor="#AA33FF" />
+        </linearGradient>
+      </defs>
       <path
         d="M12 5.5c2.8 2.6 4.5 6.3 4.5 10.5v3h-9v-3c0-4.2 1.7-7.9 4.5-10.5z"
-        fill="currentColor"
-        fillOpacity="0.15"
+        fill={`url(#${gradientId})`}
+        fillOpacity="0.2"
       />
-      <path d="M12 2.5v18" />
-      <path d="M9 3h6" />
-      <path d="M9.8 10.5q2.2 1 4.4 0" />
-      <path d="M8.6 13.8q3.4 1.4 6.8 0" />
-      <path d="M7.9 17q4.1 1.6 8.2 0" />
+      <g stroke={`url(#${gradientId})`}>
+        <path d="M12 2.5v18" />
+        <path d="M9 3h6" />
+        <path d="M9.8 10.5q2.2 1 4.4 0" />
+        <path d="M8.6 13.8q3.4 1.4 6.8 0" />
+        <path d="M7.9 17q4.1 1.6 8.2 0" />
+      </g>
     </svg>
   )
 }

@@ -2,59 +2,70 @@
 
 @theme {
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  /* Headings only -- a warm editorial serif (in the spirit of Claude's
-     Tiempos, which is a licensed Anthropic font we can't bundle here). */
-  --font-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  /* Headings/wordmark only -- a bold geometric display face for the fun,
+     energetic brand voice. Falls back to a heavy Inter cut. */
+  --font-display: "Space Grotesk", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
-  /* Warm charcoal base -- not pure black (avoids the flat cold-neon-on-black
-     look) and softened white ink (avoids glow against a dark ground).
-     surface = elevated one step above bg, surface-alt = elevated further
-     (pickers, the day panel under the calendar). */
-  --color-bg: #16140f;
-  --color-surface: #201d17;
-  --color-surface-alt: #2a261e;
-  --color-border: #3a352a;
-  --color-border-strong: #4d4636;
+  /* Bright, warm-white base with a whisper of pink in it (not stark
+     clinical white) -- surface = card white, surface-alt = tinted panel
+     one step down (segmented controls, the day panel under the calendar). */
+  --color-bg: #fff8fa;
+  --color-surface: #ffffff;
+  --color-surface-alt: #fbeef4;
+  --color-border: #f1d9e4;
+  --color-border-strong: #e2b7cd;
 
-  --color-ink: #f2ede2;
-  --color-ink-secondary: #c9c2b0;
-  --color-ink-tertiary: #9c9483;
-  --color-ink-placeholder: #6b6455;
+  --color-ink: #201229;
+  --color-ink-secondary: #5c4e66;
+  --color-ink-tertiary: #8d7c96;
+  --color-ink-placeholder: #bcaec3;
 
-  /* The one accent: warm ember, not a neon fitness-app teal/green. `accent`
-     for fills/icons/borders/focus rings; `accent-strong` a lighter step of
-     the same hue for anywhere text/icons need AA-safe contrast against dark
-     surfaces -- still a single accent hue, just two steps of it. */
-  --color-accent: #d98e4a;
-  --color-accent-strong: #f0a75c;
-  --color-accent-soft: #3a2c1c;
+  /* Brand duo. `accent` (pink) is the primary -- fills/icons/borders/focus
+     rings and the first gradient stop. `secondary` (purple) is the second
+     gradient stop and used for highlights/the third category color. Each
+     has an AA-safe "-strong" step for text on white, and a pale "-soft"
+     tint for backgrounds. */
+  --color-accent: #e61a66;
+  --color-accent-strong: #b91354;
+  --color-accent-soft: #fde5ef;
 
-  /* Status semantics (distinct hue from accent, used sparingly). The base
-     tone is used for fills/dots/icons; the "-text" step is brightened to
-     clear 4.5:1 on dark backgrounds. */
-  --color-positive: #7ec488;
-  --color-positive-text: #9adba3;
-  --color-positive-soft: #1e2b20;
-  --color-negative: #e2726b;
-  --color-negative-text: #ec9791;
-  --color-negative-soft: #2e1c1a;
+  --color-secondary: #aa33ff;
+  --color-secondary-strong: #8a1fdb;
+  --color-secondary-soft: #f3e5ff;
 
-  /* Together view: two muted person tones (fills/borders/avatars). Each has
-     a brightened "-text" step for anywhere the color needs to render as text
-     on a dark surface. */
-  --color-person-a: #cc9490;
-  --color-person-a-text: #e0b3b0;
-  --color-person-a-soft: #2c201f;
-  --color-person-b: #9db895;
-  --color-person-b-text: #bad2b2;
-  --color-person-b-soft: #1f2620;
+  /* Brand gradient, pink -> purple, for hero moments: primary CTAs, the
+     logo, celebratory states. */
+  --gradient-brand: linear-gradient(135deg, var(--color-accent) 0%, var(--color-secondary) 100%);
 
-  --radius-card: 1rem;
-  --radius-control: 0.75rem;
+  /* Status semantics (distinct hues from the brand duo, used sparingly).
+     The base tone is used for fills/dots/icons; the "-text" step is
+     darkened to clear 4.5:1 on white. */
+  --color-positive: #12c793;
+  --color-positive-text: #0a9b73;
+  --color-positive-soft: #e2faf1;
+  --color-negative: #ff4d5e;
+  --color-negative-text: #d81f38;
+  --color-negative-soft: #ffe9ec;
+
+  /* Third/fourth categorical accents (workout C, and anywhere a badge needs
+     a color beyond the brand duo + status tones). person-b doubles as the
+     "purple" workout category to tie back into the brand gradient. */
+  --color-person-a: #ff9f1c;
+  --color-person-a-text: #c9760a;
+  --color-person-a-soft: #fff2df;
+  --color-person-b: #aa33ff;
+  --color-person-b-text: #8a1fdb;
+  --color-person-b-soft: #f3e5ff;
+
+  --radius-card: 1.5rem;
+  --radius-control: 1rem;
+
+  --shadow-card: 0 12px 28px -12px rgba(170, 51, 255, 0.16), 0 4px 10px -4px rgba(230, 26, 102, 0.1);
+  --shadow-pop: 0 14px 30px -8px rgba(230, 26, 102, 0.35);
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
@@ -82,15 +93,36 @@ body {
   min-width: 44px;
 }
 
+/* Brand gradient fill, for primary CTAs and celebratory moments. */
+@utility gradient-brand {
+  background-image: var(--gradient-brand);
+}
+
+/* Brand gradient text (wordmark, big stat callouts). */
+@utility text-gradient-brand {
+  background-image: var(--gradient-brand);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+/* Soft blurred color blob for decorative backgrounds -- position + size it
+   with utility classes, this just gives it the gradient fill and blur. */
+.brand-blob {
+  background-image: var(--gradient-brand);
+  filter: blur(60px);
+  opacity: 0.35;
+}
+
 /* Floating stat chip over a photo: a dark scrim regardless of theme, since
    it sits on unpredictable image content, not a themed surface. Mirrors
    HIG's "dimming layer behind clear/translucent controls over media"
    guidance (materials.md). */
 .scrim-chip {
-  background: rgba(10, 9, 6, 0.55);
+  background: rgba(20, 8, 16, 0.55);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  color: #f2ede2;
+  color: #ffffff;
 }
 
 input,
@@ -98,6 +130,12 @@ select,
 textarea,
 button {
   font-family: inherit;
+}
+
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"] {
+  accent-color: var(--color-accent);
 }
 
 ::selection {
@@ -119,6 +157,12 @@ button {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes pop-in {
+  0% { opacity: 0; transform: scale(0.8); }
+  60% { opacity: 1; transform: scale(1.06); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
 .animate-overlay-in {
   animation: overlay-in 200ms cubic-bezier(0.165, 0.84, 0.44, 1) both;
 }
@@ -129,6 +173,10 @@ button {
 
 .animate-page-in {
   animation: page-in 200ms cubic-bezier(0.165, 0.84, 0.44, 1) both;
+}
+
+.animate-pop-in {
+  animation: pop-in 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 /* Global reduced-motion circuit breaker: !important is deliberate here so
