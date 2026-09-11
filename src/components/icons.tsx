@@ -52,13 +52,21 @@ export function InsightsIcon(props: IconProps) {
   )
 }
 
+/** A döner kebab cone on a vertical spit -- meat stack lightly filled,
+ * layer lines across it, skewer running through top to bottom. */
 export function LogoMark(props: IconProps) {
   return (
     <svg {...base} viewBox="0 0 24 24" {...props}>
-      <circle cx="12" cy="7" r="3.2" fill="currentColor" stroke="none" />
-      <path d="M12 10.6c-3.4 0-5.6 2-6.3 5.3" />
-      <path d="M12 10.6c3.4 0 5.6 2 6.3 5.3" />
-      <path d="M8.2 18.6h7.6" />
+      <path
+        d="M12 5.5c2.8 2.6 4.5 6.3 4.5 10.5v3h-9v-3c0-4.2 1.7-7.9 4.5-10.5z"
+        fill="currentColor"
+        fillOpacity="0.15"
+      />
+      <path d="M12 2.5v18" />
+      <path d="M9 3h6" />
+      <path d="M9.8 10.5q2.2 1 4.4 0" />
+      <path d="M8.6 13.8q3.4 1.4 6.8 0" />
+      <path d="M7.9 17q4.1 1.6 8.2 0" />
     </svg>
   )
 }
