@@ -18,6 +18,15 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/insights', label: 'Insights', Icon: InsightsIcon },
 ]
 
+function Wordmark({ size }: { size: 'sm' | 'md' }) {
+  return (
+    <div className="flex items-center gap-2 text-ink">
+      <LogoMark className={size === 'md' ? 'h-9 w-9' : 'h-8 w-8'} />
+      <span className={`headline ${size === 'md' ? 'text-[26px]' : 'text-[22px]'}`}>Doener</span>
+    </div>
+  )
+}
+
 export function AppShell() {
   const { user, logout } = useAuth()
   const location = useLocation()
@@ -25,35 +34,37 @@ export function AppShell() {
   return (
     <div className="flex min-h-dvh w-full flex-col md:flex-row">
       {/* Desktop sidebar */}
-      <aside className="relative hidden w-60 shrink-0 flex-col overflow-hidden border-r border-border bg-surface px-4 py-6 md:flex">
-        <div className="brand-blob pointer-events-none absolute -left-16 -top-20 h-52 w-52 rounded-full" />
-        <div className="relative mb-8 flex items-center gap-2 px-2 text-ink">
-          <LogoMark className="h-7 w-7" />
-          <span className="font-display text-[18px] font-semibold">Doener</span>
+      <aside className="hidden w-64 shrink-0 flex-col border-r-2 border-ink bg-bg px-4 py-6 md:flex">
+        <div className="mb-8 px-2">
+          <Wordmark size="md" />
         </div>
-        <nav className="relative flex flex-1 flex-col gap-1">
+        <nav className="flex flex-1 flex-col gap-2">
           {NAV_ITEMS.map(({ to, label, Icon }) => (
             <NavLink
               key={to}
               to={to}
               className={({ isActive }) =>
-                `tap-target flex items-center gap-3 rounded-[var(--radius-control)] px-3 text-[15px] font-medium transition-[background-color,color,box-shadow] ${
+                `tap-target flex items-center gap-3 rounded-[var(--radius-control)] border-2 px-3 font-display text-[15px] font-extrabold uppercase tracking-[0.03em] transition-[background-color,color,box-shadow,border-color] ${
                   isActive
-                    ? 'gradient-brand text-white shadow-[var(--shadow-pop)]'
-                    : 'text-ink-secondary hover:bg-surface-alt'
+                    ? 'border-ink bg-highlight text-ink shadow-[var(--shadow-pop)]'
+                    : 'border-transparent text-ink-secondary hover:border-ink hover:bg-surface'
                 }`
               }
             >
-              <Icon className="h-5 w-5" />
-              {label}
+              {({ isActive }) => (
+                <>
+                  <Icon className="h-5 w-5" strokeWidth={isActive ? 2.4 : 2} />
+                  {label}
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
-        <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-4 px-2">
-          <span className="truncate text-[13px] text-ink-tertiary">{user?.display_name ?? user?.username}</span>
+        <div className="mt-auto flex items-center justify-between gap-2 border-t-2 border-ink px-2 pt-4">
+          <span className="truncate text-[13px] font-medium text-ink-secondary">{user?.display_name ?? user?.username}</span>
           <button
             onClick={logout}
-            className="tap-target rounded-[var(--radius-control)] px-2 text-[13px] font-medium text-ink-secondary hover:bg-surface-alt"
+            className="tap-target rounded-full px-3 font-display text-[12px] font-extrabold uppercase tracking-[0.03em] text-ink hover:bg-surface-alt"
           >
             Log out
           </button>
@@ -62,40 +73,37 @@ export function AppShell() {
 
       {/* Main content */}
       <div className="flex min-h-dvh flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-border bg-surface px-4 py-3 md:hidden">
-          <div className="flex items-center gap-2 text-ink">
-            <LogoMark className="h-6 w-6" />
-            <span className="font-display text-[18px] font-semibold">Doener</span>
-          </div>
+        <header className="flex items-center justify-between border-b-2 border-ink bg-bg px-4 py-2.5 md:hidden">
+          <Wordmark size="sm" />
           <button
             onClick={logout}
-            className="tap-target rounded-full px-3 text-[13px] font-medium text-ink-secondary"
+            className="tap-target rounded-full px-3 font-display text-[12px] font-extrabold uppercase tracking-[0.03em] text-ink"
           >
             Log out
           </button>
         </header>
 
-        <main className="flex-1 overflow-y-auto pb-24 md:pb-8">
-          <div key={location.pathname} className="animate-page-in mx-auto w-full max-w-3xl px-4 py-5 md:px-8 md:py-8">
+        <main className="flex-1 overflow-y-auto pb-28 md:pb-8">
+          <div key={location.pathname} className="animate-page-in mx-auto w-full max-w-3xl px-4 py-6 md:px-8 md:py-10">
             <Outlet />
           </div>
         </main>
 
-        {/* Mobile bottom tab bar */}
-        <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-border bg-surface/95 backdrop-blur pb-[env(safe-area-inset-bottom)] md:hidden">
+        {/* Mobile bottom tab bar: an ink bar, active tab gets a yellow pill. */}
+        <nav className="fixed inset-x-0 bottom-0 z-20 flex gap-1 bg-ink px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden">
           {NAV_ITEMS.map(({ to, label, Icon }) => (
             <NavLink
               key={to}
               to={to}
               className={({ isActive }) =>
-                `tap-target flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium transition-colors ${
-                  isActive ? 'text-accent' : 'text-ink-tertiary'
+                `tap-target flex flex-1 flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] py-1.5 font-display text-[10px] font-extrabold uppercase tracking-[0.05em] transition-colors ${
+                  isActive ? 'bg-highlight text-ink' : 'text-bg/70'
                 }`
               }
             >
               {({ isActive }) => (
                 <>
-                  <Icon className="h-6 w-6" strokeWidth={isActive ? 2.1 : 1.8} />
+                  <Icon className="h-6 w-6" strokeWidth={isActive ? 2.4 : 1.9} />
                   {label}
                 </>
               )}

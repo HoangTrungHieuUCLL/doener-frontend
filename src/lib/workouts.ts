@@ -10,10 +10,10 @@ export const WORKOUT_LABELS: Record<WorkoutKey, string> = {
 }
 
 export const WORKOUT_DOT: Record<WorkoutKey, string> = {
-  A: 'bg-accent',
-  B: 'bg-positive',
-  C: 'bg-person-b',
-  cardio: 'bg-negative',
+  A: 'bg-workout-a',
+  B: 'bg-workout-b',
+  C: 'bg-workout-c',
+  cardio: 'bg-workout-cardio',
   rest: 'bg-ink-tertiary',
   custom: 'bg-ink-tertiary',
 }

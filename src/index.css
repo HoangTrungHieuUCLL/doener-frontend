@@ -1,67 +1,66 @@
 @import "tailwindcss";
 
+/* Look & feel: bold, game-poster energy (inspired by superplay.co) --
+   warm cream paper, near-black ink, chunky 2px outlines with hard offset
+   "sticker" shadows, heavy uppercase Rubik headlines, and a set of loud
+   primaries used as solid fills (never gradients). No orange.
+
+   Fonts are self-hosted via @fontsource (imported in main.tsx) rather than
+   hotlinked from Google Fonts: no third-party request on page load (and no
+   visitor IPs sent to Google, which German courts have ruled a GDPR issue). */
 @theme {
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  /* Headings/wordmark only -- a bold geometric display face for the fun,
-     energetic brand voice. Falls back to a heavy Inter cut. */
-  --font-display: "Space Grotesk", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sans: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* Headlines, wordmark, big numbers. Used at 800-900 weight, usually uppercase. */
+  --font-display: "Rubik Variable", "Rubik", "Arial Black", "Inter Variable", system-ui, sans-serif;
 
-  /* Bright, warm-white base with a whisper of pink in it (not stark
-     clinical white) -- surface = card white, surface-alt = tinted panel
-     one step down (segmented controls, the day panel under the calendar). */
-  --color-bg: #fff8fa;
+  /* Paper + ink. surface = card white, surface-alt = a darker cream for
+     tracks, segmented-control wells and inactive fills. */
+  --color-bg: #fffbea;
   --color-surface: #ffffff;
-  --color-surface-alt: #fbeef4;
-  --color-border: #f1d9e4;
-  --color-border-strong: #e2b7cd;
+  --color-surface-alt: #f4efd6;
+  /* Outlines are ink, on purpose -- the thick black line is the style. */
+  --color-border: #141414;
+  /* Hairlines where a full ink outline would be too loud (chart grids, dividers). */
+  --color-border-soft: #e3dcbd;
 
-  --color-ink: #201229;
-  --color-ink-secondary: #5c4e66;
-  --color-ink-tertiary: #8d7c96;
-  --color-ink-placeholder: #bcaec3;
+  --color-ink: #141414;
+  --color-ink-secondary: #45433b;
+  --color-ink-tertiary: #6e6b5e; /* 5.1:1 on bg, 4.6:1 on surface-alt */
+  --color-ink-placeholder: #a8a493;
 
-  /* Brand duo. `accent` (pink) is the primary -- fills/icons/borders/focus
-     rings and the first gradient stop. `secondary` (purple) is the second
-     gradient stop and used for highlights/the third category color. Each
-     has an AA-safe "-strong" step for text on white, and a pale "-soft"
-     tint for backgrounds. */
-  --color-accent: #e61a66;
-  --color-accent-strong: #b91354;
-  --color-accent-soft: #fde5ef;
+  /* Primary: electric blue. White text on it is 5.9:1; "-strong" is the
+     text-on-cream step (7.5:1); "-soft" is a pale tint for backgrounds. */
+  --color-accent: #2e4bff;
+  --color-accent-strong: #2238e0;
+  --color-accent-soft: #dce2ff;
 
-  --color-secondary: #aa33ff;
-  --color-secondary-strong: #8a1fdb;
-  --color-secondary-soft: #f3e5ff;
+  /* Highlight: sunny yellow. Fill only (ink text on it is 12.6:1) -- never
+     used as a text color. */
+  --color-highlight: #ffd02e;
+  --color-highlight-soft: #fff1b8;
 
-  /* Brand gradient, pink -> purple, for hero moments: primary CTAs, the
-     logo, celebratory states. */
-  --gradient-brand: linear-gradient(135deg, var(--color-accent) 0%, var(--color-secondary) 100%);
+  /* Status. Base tone = fills/dots; "-text" clears 4.5:1 on cream and on
+     its own "-soft" tint. */
+  --color-positive: #a6eb3c;
+  --color-positive-text: #2c6e00;
+  --color-positive-soft: #e8fac8;
+  --color-negative: #e5213f;
+  --color-negative-text: #c5162f;
+  --color-negative-soft: #ffe1e5;
 
-  /* Status semantics (distinct hues from the brand duo, used sparingly).
-     The base tone is used for fills/dots/icons; the "-text" step is
-     darkened to clear 4.5:1 on white. */
-  --color-positive: #12c793;
-  --color-positive-text: #0a9b73;
-  --color-positive-soft: #e2faf1;
-  --color-negative: #ff4d5e;
-  --color-negative-text: #d81f38;
-  --color-negative-soft: #ffe9ec;
+  /* One loud color per workout so the calendar, charts and badges agree. */
+  --color-workout-a: #2e4bff;
+  --color-workout-b: #a6eb3c;
+  --color-workout-c: #ffd02e;
+  --color-workout-cardio: #e5213f;
 
-  /* Third/fourth categorical accents (workout C, and anywhere a badge needs
-     a color beyond the brand duo + status tones). person-b doubles as the
-     "purple" workout category to tie back into the brand gradient. */
-  --color-person-a: #ff9f1c;
-  --color-person-a-text: #c9760a;
-  --color-person-a-soft: #fff2df;
-  --color-person-b: #aa33ff;
-  --color-person-b-text: #8a1fdb;
-  --color-person-b-soft: #f3e5ff;
+  --radius-card: 1.375rem;
+  --radius-control: 0.875rem;
 
-  --radius-card: 1.5rem;
-  --radius-control: 1rem;
-
-  --shadow-card: 0 12px 28px -12px rgba(170, 51, 255, 0.16), 0 4px 10px -4px rgba(230, 26, 102, 0.1);
-  --shadow-pop: 0 14px 30px -8px rgba(230, 26, 102, 0.35);
+  /* Hard offset shadows, no blur. */
+  --shadow-card: 4px 4px 0 0 var(--color-ink);
+  --shadow-pop: 3px 3px 0 0 var(--color-ink);
+  --shadow-lg: 6px 6px 0 0 var(--color-ink);
 }
 
 html {
@@ -93,36 +92,70 @@ body {
   min-width: 44px;
 }
 
-/* Brand gradient fill, for primary CTAs and celebratory moments. */
-@utility gradient-brand {
-  background-image: var(--gradient-brand);
+/* Page title: huge, heavy, uppercase, tight. */
+@utility headline {
+  font-family: var(--font-display);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  line-height: 0.92;
 }
 
-/* Brand gradient text (wordmark, big stat callouts). */
-@utility text-gradient-brand {
-  background-image: var(--gradient-brand);
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
+/* Section label: small heavy uppercase display type in full ink. */
+@utility eyebrow {
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 14px;
+  line-height: 1.2;
+  color: var(--color-ink);
 }
 
-/* Soft blurred color blob for decorative backgrounds -- position + size it
-   with utility classes, this just gives it the gradient fill and blur. */
-.brand-blob {
-  background-image: var(--gradient-brand);
-  filter: blur(60px);
-  opacity: 0.35;
+/* The ink outline + offset shadow "sticker" treatment for cards/controls. */
+@utility sticker {
+  border: 2px solid var(--color-ink);
+  box-shadow: var(--shadow-card);
 }
 
-/* Floating stat chip over a photo: a dark scrim regardless of theme, since
-   it sits on unpredictable image content, not a themed surface. Mirrors
-   HIG's "dimming layer behind clear/translucent controls over media"
-   guidance (materials.md). */
-.scrim-chip {
-  background: rgba(20, 8, 16, 0.55);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  color: #ffffff;
+/* Pressable sticker: sinks into its shadow on press. Pair with a
+   shadow-[var(--shadow-pop)] or sticker class. */
+@utility press {
+  transition-property: transform, box-shadow, background-color, color;
+  transition-duration: 120ms;
+  transition-timing-function: cubic-bezier(0.165, 0.84, 0.44, 1);
+  &:active:not(:disabled) {
+    transform: translate(3px, 3px);
+    box-shadow: 0 0 0 0 var(--color-ink);
+  }
+}
+
+/* Yellow marker swipe behind a word or short phrase. */
+@utility marker {
+  background: var(--color-highlight);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  padding: 0 0.18em;
+  border-radius: 0.2em;
+}
+
+/* Floating stat chip over a photo: a yellow sticker, slightly tilted. */
+.photo-chip {
+  background: var(--color-highlight);
+  color: var(--color-ink);
+  border: 2px solid var(--color-ink);
+  box-shadow: 2px 2px 0 0 var(--color-ink);
+  transform: rotate(-3deg);
+}
+
+/* Small calendar/legend dot. The ink ring keeps pale fills (yellow, lime)
+   visible against white. */
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  box-shadow: 0 0 0 1.5px var(--color-ink);
 }
 
 input,
@@ -139,7 +172,8 @@ input[type="range"] {
 }
 
 ::selection {
-  background: var(--color-accent-soft);
+  background: var(--color-highlight);
+  color: var(--color-ink);
 }
 
 @keyframes overlay-in {

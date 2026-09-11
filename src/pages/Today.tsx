@@ -12,7 +12,6 @@ import {
 } from '../api/hooks/useSessions'
 import type { Exercise, LastSet, SessionSetDetail, SessionWorkoutKey } from '../api/types'
 import { RestTimer } from '../components/RestTimer'
-import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Card } from '../components/ui/Card'
@@ -57,11 +56,11 @@ export function Today() {
 
   if (activeSessionId === null || !session) {
     return (
-      <div className="flex flex-col items-center gap-8 pt-8 text-center">
-        <header>
-          <h1 className="font-display text-[24px] font-semibold text-ink">Today</h1>
+      <div className="flex flex-col items-center gap-10 pt-6 text-center">
+        <header className="flex flex-col items-center gap-3">
+          <h1 className="headline text-[64px]">Today</h1>
           {!plannedKey && (
-            <p className="text-[14px] text-ink-secondary">
+            <p className="max-w-xs text-[15px] text-ink-secondary">
               Nothing planned for today — head to Plan to assign a workout.
             </p>
           )}
@@ -106,18 +105,18 @@ function StartButton({ label, onStart }: { label: string; onStart: () => void })
       type="button"
       onClick={() => setActive((a) => !a)}
       aria-label={active ? 'Cancel start' : label}
-      className="relative flex h-64 w-64 max-h-[75vw] max-w-[75vw] items-center justify-center rounded-full gradient-brand p-6 text-center text-white shadow-[var(--shadow-pop)] transition-transform active:scale-[0.97]"
+      className="press relative flex h-64 w-64 max-h-[75vw] max-w-[75vw] items-center justify-center rounded-full border-[3px] border-ink bg-accent p-6 text-center text-white shadow-[var(--shadow-lg)]"
     >
       <svg className="absolute inset-0 -rotate-90" viewBox="0 0 120 120">
-        <circle cx="60" cy="60" r={radius} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="5" />
+        <circle cx="60" cy="60" r={radius} fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="4" strokeDasharray="2 4" />
         {active && (
           <circle
             cx="60"
             cy="60"
             r={radius}
             fill="none"
-            stroke="white"
-            strokeWidth="5"
+            stroke="var(--color-highlight)"
+            strokeWidth="6"
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={circumference * (1 - progress)}
@@ -125,7 +124,7 @@ function StartButton({ label, onStart }: { label: string; onStart: () => void })
           />
         )}
       </svg>
-      <span className="text-[32px] font-semibold tabular-nums">
+      <span className="headline text-[34px] tabular-nums">
         {active ? (remaining > 0 ? remaining : 'Go!') : label}
       </span>
     </button>
@@ -141,19 +140,19 @@ function FinishedSummary({
 }) {
   return (
     <div className="flex flex-col items-center gap-5 py-10 text-center">
-      <div className="animate-pop-in flex h-20 w-20 items-center justify-center rounded-full gradient-brand text-white shadow-[var(--shadow-pop)]">
+      <div className="animate-pop-in flex h-24 w-24 items-center justify-center rounded-full border-[3px] border-ink bg-positive text-ink shadow-[var(--shadow-lg)]">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </div>
       <div>
-        <h1 className="font-display text-[22px] font-semibold text-ink">Workout complete</h1>
-        <p className="text-[14px] text-ink-secondary">{WORKOUT_LABELS[session.workout_key]} is in the books.</p>
+        <h1 className="headline text-[44px]">Workout <span className="marker">complete</span></h1>
+        <p className="mt-3 text-[15px] text-ink-secondary">{WORKOUT_LABELS[session.workout_key]} is in the books.</p>
       </div>
       {session.total_volume_kg !== null && (
         <Card className="w-full max-w-xs">
-          <p className="text-[13px] text-ink-tertiary">Total volume</p>
-          <p className="font-display text-[28px] font-semibold text-gradient-brand">{Math.round(session.total_volume_kg)} kg</p>
+          <p className="eyebrow text-ink-tertiary">Total volume</p>
+          <p className="headline mt-1 text-[48px] text-accent-strong">{Math.round(session.total_volume_kg)} kg</p>
         </Card>
       )}
       <Button onClick={onStartNew}>Back to Today</Button>
@@ -237,21 +236,25 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
 
   return (
     <div className="flex flex-col gap-6 pb-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-[24px] font-semibold text-ink">{WORKOUT_LABELS[workoutKey]}</h1>
-          <p className="text-[14px] text-ink-secondary">{isPaused ? 'Paused' : 'In progress'}</p>
+      <header className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          <h1 className="headline text-[44px]">{WORKOUT_LABELS[workoutKey]}</h1>
+          <p>
+            <span className={`inline-flex items-center gap-1.5 rounded-full border-2 border-ink px-2 py-0.5 font-display text-[11px] font-extrabold uppercase tracking-[0.05em] ${isPaused ? 'bg-surface-alt text-ink' : 'bg-positive text-ink'}`}>
+              {isPaused ? 'Paused' : 'In progress'}
+            </span>
+          </p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <p className="text-[12px] uppercase tracking-wide text-ink-tertiary">Elapsed</p>
-            <p className="text-[22px] font-semibold tabular-nums text-ink">{formatDuration(displaySec)}</p>
+        <div className="sticker flex items-center gap-3 rounded-[var(--radius-card)] bg-surface py-2 pl-4 pr-2">
+          <div className="flex-1">
+            <p className="eyebrow text-[11px] text-ink-tertiary">Elapsed</p>
+            <p className="font-display text-[34px] font-black leading-none tabular-nums text-ink">{formatDuration(displaySec)}</p>
           </div>
           <button
             type="button"
             onClick={togglePause}
             aria-label={isPaused ? 'Resume workout' : 'Pause workout'}
-            className="tap-target flex items-center justify-center rounded-full border border-border text-ink-secondary transition-transform active:scale-[0.94] hover:bg-surface-alt"
+            className="tap-target press flex items-center justify-center rounded-full border-2 border-ink bg-surface text-[20px] font-bold text-ink shadow-[var(--shadow-pop)] hover:bg-highlight"
           >
             {isPaused ? (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -267,7 +270,7 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
             type="button"
             onClick={() => setConfirmReset(true)}
             aria-label="Reset workout"
-            className="tap-target flex items-center justify-center rounded-full border border-border text-ink-secondary transition-transform active:scale-[0.94] hover:bg-surface-alt"
+            className="tap-target press flex items-center justify-center rounded-full border-2 border-ink bg-surface text-[20px] font-bold text-ink shadow-[var(--shadow-pop)] hover:bg-highlight"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 12a9 9 0 1 1 3 6.7M3 12v5h5" strokeLinecap="round" strokeLinejoin="round" />
@@ -288,14 +291,14 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
       )}
 
       {workoutKey !== 'cardio' && (
-        <div className="flex gap-1 rounded-[var(--radius-control)] bg-surface-alt p-1">
+        <div className="flex gap-1 rounded-full border-2 border-ink bg-surface p-1">
           {(['focus', 'list'] as const).map((mode) => (
             <button
               key={mode}
               type="button"
               onClick={() => setViewMode(mode)}
-              className={`tap-target flex-1 rounded-[calc(var(--radius-control)-4px)] text-[13px] font-medium capitalize transition-colors ${
-                viewMode === mode ? 'bg-surface text-ink shadow-sm' : 'text-ink-tertiary'
+              className={`tap-target flex-1 rounded-full font-display text-[13px] font-extrabold uppercase tracking-[0.05em] transition-colors ${
+                viewMode === mode ? 'bg-ink text-bg' : 'text-ink-tertiary hover:text-ink'
               }`}
             >
               {mode}
@@ -351,15 +354,15 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
         </>
       ) : currentIndex < queue.length ? (
         <section className="flex flex-col gap-3">
-          <div className="flex items-center justify-between text-[12px] font-medium text-ink-tertiary">
+          <div className="eyebrow flex items-center justify-between text-[12px]">
             <span>{warmupIds.has(queue[currentIndex].id) ? 'Warm-up' : WORKOUT_LABELS[workoutKey]}</span>
             <span>
               {currentIndex + 1} of {queue.length}
             </span>
           </div>
-          <div className="h-1 w-full overflow-hidden rounded-full bg-surface-alt">
+          <div className="h-3.5 w-full overflow-hidden rounded-full border-2 border-ink bg-surface">
             <div
-              className="h-full rounded-full gradient-brand transition-all"
+              className="h-full border-r-2 border-ink bg-accent transition-all"
               style={{ width: `${((currentIndex + 1) / queue.length) * 100}%` }}
             />
           </div>
@@ -376,7 +379,7 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
           />
         </section>
       ) : (
-        <p className="py-6 text-center text-[15px] font-medium text-ink-secondary">
+        <p className="headline py-6 text-center text-[28px]">
           All exercises done — ready to finish.
         </p>
       )}
@@ -391,7 +394,7 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-[13px] font-semibold uppercase tracking-wide text-ink-tertiary">{title}</h2>
+      <h2 className="eyebrow">{title}</h2>
       <div className="flex flex-col gap-3">{children}</div>
     </section>
   )
@@ -412,22 +415,22 @@ function Stepper({
 }) {
   return (
     <div className="flex flex-col items-center gap-1">
-      <span className="text-[11px] uppercase tracking-wide text-ink-tertiary">{label}</span>
-      <div className="flex items-center gap-1">
+      <span className="eyebrow text-[11px] text-ink-tertiary">{label}</span>
+      <div className="flex items-center gap-0.5">
         <button
           type="button"
           aria-label={`Decrease ${label}`}
           onClick={() => onChange(Math.max(min, round1(value - step)))}
-          className="tap-target flex items-center justify-center rounded-full border border-border text-ink-secondary transition-transform active:scale-[0.94] hover:bg-surface-alt"
+          className="tap-target press flex items-center justify-center rounded-full border-2 border-ink bg-surface text-[20px] font-bold text-ink shadow-[var(--shadow-pop)] hover:bg-highlight"
         >
           −
         </button>
-        <span className="w-12 text-center text-[16px] font-semibold tabular-nums text-ink">{value}</span>
+        <span className="w-14 text-center font-display text-[22px] font-black tabular-nums text-ink">{value}</span>
         <button
           type="button"
           aria-label={`Increase ${label}`}
           onClick={() => onChange(round1(value + step))}
-          className="tap-target flex items-center justify-center rounded-full border border-border text-ink-secondary transition-transform active:scale-[0.94] hover:bg-surface-alt"
+          className="tap-target press flex items-center justify-center rounded-full border-2 border-ink bg-surface text-[20px] font-bold text-ink shadow-[var(--shadow-pop)] hover:bg-highlight"
         >
           +
         </button>
@@ -497,16 +500,17 @@ function ExerciseLogCard({
   }
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface">
+    <div className="sticker flex flex-col overflow-hidden rounded-[var(--radius-card)] bg-surface">
       <ExerciseCard
+        framed={false}
         exerciseKey={exercise.key}
         title={exercise.name}
         subtitle={`${setCount} set${setCount === 1 ? '' : 's'} logged · ${targetLabel(exercise)}${exercise.per_side ? ' per side' : ''}`}
-        chip={isNewPr ? <Badge tone="positive">New PR!</Badge> : targetLabel(exercise)}
-        className="h-28"
+        chip={isNewPr ? 'New PR!' : targetLabel(exercise)}
+        className="h-32 border-b-2 border-ink"
       />
 
-      <div className="flex flex-wrap items-center justify-center gap-4 p-4">
+      <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-4 p-4">
         {exercise.type === 'time' ? (
           <Stepper label="Seconds" value={durationSec} step={5} onChange={setDurationSec} />
         ) : (
@@ -569,7 +573,7 @@ function CardioForm({ sessionId }: { sessionId: number }) {
         <Button type="submit" disabled={logCardio.isPending}>
           {logCardio.isPending ? 'Logging…' : 'Log cardio'}
         </Button>
-        {logged && <p className="text-[13px] text-positive-text">Cardio logged.</p>}
+        {logged && <p className="text-[13px] font-semibold text-positive-text">Cardio logged.</p>}
       </form>
     </Card>
   )

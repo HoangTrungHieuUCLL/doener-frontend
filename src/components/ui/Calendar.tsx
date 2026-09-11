@@ -35,25 +35,25 @@ export function Calendar({
         <button
           type="button"
           aria-label="Previous month"
-          className="tap-target flex items-center justify-center rounded-[var(--radius-control)] text-ink-secondary transition-transform active:scale-[0.94] hover:bg-surface-alt"
+          className="tap-target flex items-center justify-center rounded-full border-2 border-ink bg-surface text-[20px] font-bold leading-none text-ink shadow-[var(--shadow-pop)] press hover:bg-highlight"
           onClick={() => onMonthChange(addMonths(month, -1))}
         >
           ‹
         </button>
-        <p className="text-[15px] font-semibold text-ink">
+        <p className="headline text-[22px]">
           {MONTH_NAMES[month.getMonth()]} {month.getFullYear()}
         </p>
         <button
           type="button"
           aria-label="Next month"
-          className="tap-target flex items-center justify-center rounded-[var(--radius-control)] text-ink-secondary transition-transform active:scale-[0.94] hover:bg-surface-alt"
+          className="tap-target flex items-center justify-center rounded-full border-2 border-ink bg-surface text-[20px] font-bold leading-none text-ink shadow-[var(--shadow-pop)] press hover:bg-highlight"
           onClick={() => onMonthChange(addMonths(month, 1))}
         >
           ›
         </button>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-ink-tertiary">
+      <div className="grid grid-cols-7 gap-1 text-center font-display text-[12px] font-extrabold text-ink-tertiary">
         {WEEKDAY_NAMES.map((w) => (
           <div key={w}>{w[0]}</div>
         ))}
@@ -72,12 +72,12 @@ export function Calendar({
               key={iso}
               type="button"
               onClick={() => onSelectDay?.(iso)}
-              className={`tap-target flex aspect-square flex-col items-center justify-center gap-0.5 rounded-[var(--radius-control)] text-[13px] transition-[transform,background-color,color] active:scale-[0.94] ${
+              className={`tap-target flex aspect-square flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] border-2 font-display text-[14px] font-bold transition-[transform,background-color,color] active:scale-[0.94] ${
                 isSelected
-                  ? 'gradient-brand text-white shadow-[var(--shadow-pop)]'
+                  ? 'border-ink bg-accent text-white shadow-[var(--shadow-pop)]'
                   : isToday
-                    ? 'border-2 border-accent text-ink font-semibold'
-                    : 'text-ink hover:bg-surface-alt'
+                    ? 'border-ink bg-highlight text-ink'
+                    : 'border-transparent text-ink hover:bg-surface-alt'
               }`}
             >
               <span>{day}</span>

@@ -9,18 +9,18 @@ import { formatShortDate, monthDates, todayISO } from '../lib/date'
 import { WORKOUT_LABELS } from '../lib/workouts'
 
 const CATEGORY_COLOR: Record<string, string> = {
-  A: 'var(--color-accent)',
-  B: 'var(--color-positive)',
-  C: 'var(--color-person-b)',
-  cardio: 'var(--color-negative)',
+  A: 'var(--color-workout-a)',
+  B: 'var(--color-workout-b)',
+  C: 'var(--color-workout-c)',
+  cardio: 'var(--color-workout-cardio)',
 }
 
 export function Insights() {
   return (
     <div className="flex flex-col gap-8">
       <header>
-        <h1 className="font-display text-[24px] font-semibold text-ink">Insights</h1>
-        <p className="text-[14px] text-ink-secondary">Deeper trends behind the numbers.</p>
+        <h1 className="headline text-[56px]">Insights</h1>
+        <p className="mt-2 text-[15px] text-ink-secondary">Deeper trends behind the numbers.</p>
       </header>
 
       <ExerciseProgressChart />
@@ -47,13 +47,13 @@ function ExerciseProgressChart() {
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-[13px] font-semibold uppercase tracking-wide text-ink-tertiary">
+        <h2 className="eyebrow">
           Per-exercise progress
         </h2>
         <select
           value={selectedId ?? ''}
           onChange={(e) => setExerciseId(Number(e.target.value))}
-          className="tap-target rounded-[var(--radius-control)] border border-border bg-surface px-2 text-[13px] text-ink"
+          className="tap-target max-w-[55%] rounded-[var(--radius-control)] border-2 border-ink bg-surface px-2 text-[13px] font-semibold text-ink shadow-[var(--shadow-pop)]"
         >
           {nonWarmup.map((ex) => (
             <option key={ex.id} value={ex.id}>
@@ -70,30 +70,30 @@ function ExerciseProgressChart() {
         ) : (
           <div className="h-52 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 8, right: 12, left: -12, bottom: 0 }}>
+              <LineChart data={chartData} margin={{ top: 8, right: 12, left: -4, bottom: 0 }}>
                 <XAxis
                   dataKey="label"
                   tick={{ fontSize: 11, fill: 'var(--color-ink-tertiary)' }}
-                  axisLine={{ stroke: 'var(--color-border)' }}
+                  axisLine={{ stroke: 'var(--color-ink)', strokeWidth: 2 }}
                   tickLine={false}
                 />
                 <YAxis
                   tick={{ fontSize: 11, fill: 'var(--color-ink-tertiary)' }}
                   axisLine={false}
                   tickLine={false}
-                  width={36}
+                  width={44}
                 />
                 <Tooltip
-                  contentStyle={{ borderRadius: 10, border: '1px solid var(--color-border)', fontSize: 13 }}
+                  contentStyle={{ borderRadius: 12, border: '2px solid var(--color-ink)', boxShadow: 'var(--shadow-pop)', fontSize: 13, fontWeight: 600 }}
                   formatter={(value) => [`${value} kg`, 'Weight']}
                 />
                 <Line
                   type="monotone"
                   dataKey="weight_kg"
-                  stroke="var(--color-accent-strong)"
-                  strokeWidth={2.5}
-                  dot={{ r: 3, fill: 'var(--color-accent-strong)' }}
-                  activeDot={{ r: 5 }}
+                  stroke="var(--color-accent)"
+                  strokeWidth={3.5}
+                  dot={{ r: 4, fill: 'var(--color-highlight)', stroke: 'var(--color-ink)', strokeWidth: 2 }}
+                  activeDot={{ r: 6, fill: 'var(--color-highlight)', stroke: 'var(--color-ink)', strokeWidth: 2 }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -110,7 +110,7 @@ function VolumeByCategoryChart() {
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-[13px] font-semibold uppercase tracking-wide text-ink-tertiary">
+      <h2 className="eyebrow">
         Volume by category, last {chartData.length || 30} sessions
       </h2>
       <Card>
@@ -121,30 +121,35 @@ function VolumeByCategoryChart() {
         ) : (
           <div className="h-52 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 8, right: 12, left: -12, bottom: 0 }}>
-                <CartesianGrid vertical={false} stroke="var(--color-border)" />
+              <BarChart data={chartData} margin={{ top: 8, right: 12, left: -4, bottom: 0 }}>
+                <CartesianGrid vertical={false} stroke="var(--color-border-soft)" />
                 <XAxis
                   dataKey="label"
                   tick={{ fontSize: 11, fill: 'var(--color-ink-tertiary)' }}
-                  axisLine={{ stroke: 'var(--color-border)' }}
+                  axisLine={{ stroke: 'var(--color-ink)', strokeWidth: 2 }}
                   tickLine={false}
                 />
                 <YAxis
                   tick={{ fontSize: 11, fill: 'var(--color-ink-tertiary)' }}
                   axisLine={false}
                   tickLine={false}
-                  width={36}
+                  width={44}
                 />
                 <Tooltip
-                  contentStyle={{ borderRadius: 10, border: '1px solid var(--color-border)', fontSize: 13 }}
+                  contentStyle={{ borderRadius: 12, border: '2px solid var(--color-ink)', boxShadow: 'var(--shadow-pop)', fontSize: 13, fontWeight: 600 }}
                   formatter={(value, _name, props) => [
                     `${Math.round(Number(value))} kg`,
                     props.payload.workout_key,
                   ]}
                 />
-                <Bar dataKey="total_volume_kg" radius={[4, 4, 0, 0]}>
+                <Bar dataKey="total_volume_kg" radius={[5, 5, 0, 0]}>
                   {chartData.map((p) => (
-                    <Cell key={p.session_id} fill={CATEGORY_COLOR[p.workout_key] ?? 'var(--color-accent)'} />
+                    <Cell
+                      key={p.session_id}
+                      fill={CATEGORY_COLOR[p.workout_key] ?? 'var(--color-accent)'}
+                      stroke="var(--color-ink)"
+                      strokeWidth={1.5}
+                    />
                   ))}
                 </Bar>
               </BarChart>
@@ -152,10 +157,10 @@ function VolumeByCategoryChart() {
           </div>
         )}
       </Card>
-      <div className="flex flex-wrap gap-3 text-[12px] text-ink-tertiary">
+      <div className="flex flex-wrap gap-4 text-[12px] font-semibold text-ink-secondary">
         {(['A', 'B', 'C', 'cardio'] as WorkoutKey[]).map((key) => (
           <span key={key} className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full" style={{ background: CATEGORY_COLOR[key] }} />
+            <span className="dot" style={{ background: CATEGORY_COLOR[key] }} />
             {WORKOUT_LABELS[key]}
           </span>
         ))}
@@ -199,8 +204,8 @@ function ConsistencyHeatmap() {
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-[13px] font-semibold uppercase tracking-wide text-ink-tertiary">Consistency</h2>
-        <span className="text-[13px] font-medium text-accent-strong">
+        <h2 className="eyebrow">Consistency</h2>
+        <span className="rounded-full border-2 border-ink bg-highlight px-2.5 py-0.5 font-display text-[12px] font-extrabold uppercase tracking-[0.03em] text-ink">
           {streak > 0 ? `${streak}-day streak` : 'No current streak'}
         </span>
       </div>
@@ -214,18 +219,18 @@ function ConsistencyHeatmap() {
             renderDay={(iso) => {
               const entry = byDate[iso]
               if (!entry?.planned && !entry?.done) return null
-              const color = entry.done ? 'bg-positive' : 'bg-ink-tertiary'
-              return <span className={`h-1.5 w-1.5 rounded-full ${color}`} />
+              const color = entry.done ? 'bg-positive' : 'bg-surface'
+              return <span className={`dot ${color}`} />
             }}
           />
         )}
       </Card>
-      <div className="flex gap-4 text-[12px] text-ink-tertiary">
+      <div className="flex gap-4 text-[12px] font-semibold text-ink-secondary">
         <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-positive" /> Trained
+          <span className="dot bg-positive" /> Trained
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-ink-tertiary" /> Planned, not done
+          <span className="dot bg-surface" /> Planned, not done
         </span>
       </div>
     </section>

@@ -6,14 +6,14 @@ import { Badge } from '../components/ui/Badge'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { formatShortDate } from '../lib/date'
-import { WORKOUT_LABELS } from '../lib/workouts'
+import { WORKOUT_DOT, WORKOUT_LABELS } from '../lib/workouts'
 
 export function History() {
   return (
     <div className="flex flex-col gap-8">
       <header>
-        <h1 className="font-display text-[24px] font-semibold text-ink">History</h1>
-        <p className="text-[14px] text-ink-secondary">Your training over time.</p>
+        <h1 className="headline text-[56px]">History</h1>
+        <p className="mt-2 text-[15px] text-ink-secondary">Your training over time.</p>
       </header>
 
       <VolumeChart />
@@ -30,7 +30,7 @@ function VolumeChart() {
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-[13px] font-semibold uppercase tracking-wide text-ink-tertiary">
+      <h2 className="eyebrow">
         Volume, last {chartData.length || 10} sessions
       </h2>
       <Card>
@@ -41,34 +41,36 @@ function VolumeChart() {
         ) : (
           <div className="h-52 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 8, right: 12, left: -12, bottom: 0 }}>
+              <LineChart data={chartData} margin={{ top: 8, right: 12, left: -4, bottom: 0 }}>
                 <XAxis
                   dataKey="label"
                   tick={{ fontSize: 11, fill: 'var(--color-ink-tertiary)' }}
-                  axisLine={{ stroke: 'var(--color-border)' }}
+                  axisLine={{ stroke: 'var(--color-ink)', strokeWidth: 2 }}
                   tickLine={false}
                 />
                 <YAxis
                   tick={{ fontSize: 11, fill: 'var(--color-ink-tertiary)' }}
                   axisLine={false}
                   tickLine={false}
-                  width={36}
+                  width={44}
                 />
                 <Tooltip
                   contentStyle={{
-                    borderRadius: 10,
-                    border: '1px solid var(--color-border)',
+                    borderRadius: 12,
+                    border: '2px solid var(--color-ink)',
+                    boxShadow: 'var(--shadow-pop)',
                     fontSize: 13,
+                    fontWeight: 600,
                   }}
                   formatter={(value) => [`${Math.round(Number(value))} kg`, 'Volume']}
                 />
                 <Line
                   type="monotone"
                   dataKey="total_volume_kg"
-                  stroke="var(--color-accent-strong)"
-                  strokeWidth={2.5}
-                  dot={{ r: 3, fill: 'var(--color-accent-strong)' }}
-                  activeDot={{ r: 5 }}
+                  stroke="var(--color-accent)"
+                  strokeWidth={3.5}
+                  dot={{ r: 4, fill: 'var(--color-highlight)', stroke: 'var(--color-ink)', strokeWidth: 2 }}
+                  activeDot={{ r: 6, fill: 'var(--color-highlight)', stroke: 'var(--color-ink)', strokeWidth: 2 }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -84,7 +86,7 @@ function PrList() {
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-[13px] font-semibold uppercase tracking-wide text-ink-tertiary">Personal records</h2>
+      <h2 className="eyebrow">Personal records</h2>
       {isLoading ? (
         <p className="text-center text-ink-tertiary">Loading…</p>
       ) : !data || data.length === 0 ? (
@@ -94,10 +96,10 @@ function PrList() {
           {data.map((pr) => (
             <Card key={pr.exercise_id} className="flex items-center justify-between py-3">
               <div>
-                <p className="text-[14px] font-medium text-ink">{pr.exercise_name}</p>
+                <p className="font-display text-[16px] font-extrabold uppercase text-ink">{pr.exercise_name}</p>
                 <p className="text-[12px] text-ink-tertiary">{formatShortDate(pr.achieved_at)}</p>
               </div>
-              <Badge tone="accent">{pr.best_weight_kg} kg</Badge>
+              <Badge tone="highlight">{pr.best_weight_kg} kg</Badge>
             </Card>
           ))}
         </div>
@@ -115,7 +117,7 @@ function SessionList() {
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-[13px] font-semibold uppercase tracking-wide text-ink-tertiary">Sessions</h2>
+      <h2 className="eyebrow">Sessions</h2>
       {isLoading ? (
         <p className="text-center text-ink-tertiary">Loading…</p>
       ) : items.length === 0 ? (
@@ -125,14 +127,17 @@ function SessionList() {
           {items.map((s) => (
             <Card key={s.id} className="flex items-center justify-between py-3">
               <div>
-                <p className="text-[14px] font-medium text-ink">{WORKOUT_LABELS[s.workout_key]}</p>
+                <p className="flex items-center gap-2 font-display text-[16px] font-extrabold uppercase text-ink">
+                  <span className={`dot ${WORKOUT_DOT[s.workout_key]}`} />
+                  {WORKOUT_LABELS[s.workout_key]}
+                </p>
                 <p className="text-[12px] text-ink-tertiary">
                   {formatShortDate(s.started_at)}
                   {!s.finished_at && ' · in progress'}
                 </p>
               </div>
               {s.total_volume_kg !== null && (
-                <span className="text-[14px] font-semibold tabular-nums text-ink-secondary">
+                <span className="font-display text-[18px] font-black tabular-nums text-ink">
                   {Math.round(s.total_volume_kg)} kg
                 </span>
               )}
@@ -150,7 +155,7 @@ function SessionList() {
         >
           Previous
         </Button>
-        <span className="text-[13px] text-ink-tertiary">Page {page}</span>
+        <span className="eyebrow text-[12px] text-ink-tertiary">Page {page}</span>
         <Button
           variant="secondary"
           size="md"

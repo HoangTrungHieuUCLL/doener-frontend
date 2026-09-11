@@ -31,13 +31,11 @@ export function Login() {
 
   return (
     <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-bg px-5">
-      <div className="brand-blob pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full" />
-      <div className="brand-blob pointer-events-none absolute -bottom-28 -right-20 h-80 w-80 rounded-full" />
-      <div className="relative w-full max-w-sm">
-        <div className="mb-8 flex flex-col items-center gap-2">
-          <LogoMark className="h-12 w-12" />
-          <h1 className="font-display text-[24px] font-semibold text-ink">Doener</h1>
-          <p className="text-[14px] text-ink-secondary">Log in to keep your streak going.</p>
+      <div className="relative w-full max-w-sm border-2 border-ink rounded-[var(--radius-card)] bg-surface px-5 py-8 shadow-[var(--shadow-lg)]">
+        <div className="mb-8 flex flex-col items-center gap-3 text-center">
+          <LogoMark className="h-16 w-16" />
+          <h1 className="headline text-[72px]">Doener</h1>
+          <p className="font-display text-[15px] font-extrabold uppercase tracking-[0.03em] text-ink"><span className="marker">Log in to keep your streak going.</span></p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -61,7 +59,7 @@ export function Login() {
           />
 
           {authError && (
-            <p className="rounded-[var(--radius-control)] bg-negative-soft px-3 py-2 text-[13px] text-negative-text">
+            <p className="rounded-[var(--radius-control)] border-2 border-ink bg-negative-soft px-3 py-2 text-[13px] font-semibold text-negative-text">
               {authError}
             </p>
           )}
@@ -73,7 +71,7 @@ export function Login() {
 
         <p className="mt-6 text-center text-[14px] text-ink-secondary">
           New here?{' '}
-          <Link to="/signup" className="font-medium text-accent-strong">
+          <Link to="/signup" className="font-bold text-accent-strong underline decoration-2 underline-offset-4">
             Create an account
           </Link>
         </p>

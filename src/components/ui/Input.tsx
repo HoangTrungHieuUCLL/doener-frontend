@@ -8,7 +8,7 @@ export function Input({ label, id, className = '', ...rest }: InputProps) {
   const inputEl = (
     <input
       id={id}
-      className={`h-11 w-full rounded-[var(--radius-control)] border border-border bg-surface px-3.5 text-[16px] text-ink placeholder:text-ink-placeholder focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-soft ${className}`}
+      className={`h-12 w-full rounded-[var(--radius-control)] border-2 border-ink bg-surface px-3.5 text-[16px] text-ink placeholder:text-ink-placeholder focus:outline-none focus:ring-4 focus:ring-accent-soft focus:border-accent ${className}`}
       {...rest}
     />
   )
@@ -17,7 +17,7 @@ export function Input({ label, id, className = '', ...rest }: InputProps) {
 
   return (
     <label htmlFor={id} className="flex flex-col gap-1.5">
-      <span className="text-[13px] font-medium text-ink-secondary">{label}</span>
+      <span className="eyebrow text-[12px]">{label}</span>
       {inputEl}
     </label>
   )

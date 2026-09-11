@@ -9,16 +9,20 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode
 }
 
+// Outlined variants sit on a hard ink shadow and sink into it on press
+// (`press` utility); ghost stays flat.
 const variantClasses: Record<Variant, string> = {
-  primary: 'gradient-brand text-white shadow-[var(--shadow-pop)] active:opacity-90 disabled:opacity-40 disabled:shadow-none',
+  primary:
+    'bg-accent text-white border-2 border-ink shadow-[var(--shadow-pop)] press disabled:opacity-40 disabled:shadow-none',
   secondary:
-    'bg-surface-alt text-ink border border-border active:bg-border disabled:opacity-40',
+    'bg-surface text-ink border-2 border-ink shadow-[var(--shadow-pop)] press disabled:opacity-40 disabled:shadow-none',
   ghost: 'bg-transparent text-ink-secondary active:bg-surface-alt disabled:opacity-40',
-  danger: 'bg-negative-text text-white active:opacity-90 disabled:opacity-40',
+  danger:
+    'bg-negative text-white border-2 border-ink shadow-[var(--shadow-pop)] press disabled:opacity-40 disabled:shadow-none',
 }
 
 const sizeClasses: Record<Size, string> = {
-  md: 'h-11 px-4 text-[15px]',
+  md: 'h-11 px-4 text-[14px]',
   lg: 'h-14 px-6 text-[17px]',
 }
 
@@ -31,7 +35,7 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
-      className={`tap-target inline-flex items-center justify-center gap-2 rounded-[var(--radius-control)] font-semibold transition-[color,background-color,border-color,transform,box-shadow] duration-150 active:scale-[0.96] disabled:cursor-not-allowed disabled:active:scale-100 ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      className={`tap-target inline-flex items-center justify-center gap-2 rounded-[var(--radius-control)] font-display font-extrabold uppercase tracking-[0.03em] disabled:cursor-not-allowed ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
       {...rest}
     >
       {children}

@@ -101,8 +101,8 @@ export function Plan() {
   return (
     <div className="flex flex-col gap-6">
       <header>
-        <h1 className="font-display text-[24px] font-semibold text-ink">Plan</h1>
-        <p className="text-[14px] text-ink-secondary">
+        <h1 className="headline text-[56px]">Plan</h1>
+        <p className="mt-2 text-[15px] text-ink-secondary">
           {multiSelect ? 'Tap days, then pick a workout for all of them.' : 'Tap a day, then pick a workout.'}
         </p>
       </header>
@@ -113,15 +113,15 @@ export function Plan() {
         <>
           <Card>
             <div className="mb-3 flex items-center justify-between">
-              <label className="flex items-center gap-2 text-[13px] font-medium text-ink-secondary">
-                <input type="checkbox" checked={multiSelect} onChange={toggleMultiSelect} className="h-4 w-4" />
+              <label className="flex items-center gap-2 text-[13px] font-semibold text-ink">
+                <input type="checkbox" checked={multiSelect} onChange={toggleMultiSelect} className="h-5 w-5" />
                 Choose multiple dates
               </label>
               {selectedDays.length > 0 && (
                 <button
                   type="button"
                   onClick={() => setSelectedDays([])}
-                  className="text-[13px] font-medium text-accent-strong"
+                  className="font-display text-[12px] font-extrabold uppercase tracking-[0.03em] text-accent-strong underline decoration-2 underline-offset-4"
                 >
                   Clear selection
                 </button>
@@ -134,13 +134,13 @@ export function Plan() {
               onSelectDay={selectDay}
               renderDay={(iso) => {
                 const key = planByDate[iso]
-                return key ? <span className={`h-1.5 w-1.5 rounded-full ${WORKOUT_DOT[key]}`} /> : null
+                return key ? <span className={`dot ${WORKOUT_DOT[key]}`} /> : null
               }}
             />
           </Card>
 
           <Card>
-            <p className="mb-3 text-[13px] font-medium text-ink-secondary">
+            <p className="eyebrow mb-3">
               {selectedDays.length === 0
                 ? 'No days selected'
                 : selectedDays.length === 1
@@ -153,12 +153,13 @@ export function Plan() {
                   key={key}
                   onClick={() => pickWorkout(key)}
                   disabled={setPlan.isPending || selectedDays.length === 0}
-                  className={`tap-target rounded-[var(--radius-control)] border px-3 py-2 text-[13px] font-medium disabled:opacity-40 ${
+                  className={`tap-target press flex items-center justify-center gap-2 rounded-[var(--radius-control)] border-2 border-ink px-3 py-2 font-display text-[13px] font-extrabold uppercase tracking-[0.03em] shadow-[var(--shadow-pop)] disabled:opacity-40 disabled:shadow-none ${
                     selectedDays.length === 1 && planByDate[selectedDays[0]] === key
-                      ? 'border-accent bg-accent-soft text-accent-strong'
-                      : 'border-border text-ink-secondary'
+                      ? 'bg-highlight text-ink'
+                      : 'bg-surface text-ink'
                   }`}
                 >
+                  <span className={`dot ${WORKOUT_DOT[key]}`} />
                   {WORKOUT_LABELS[key]}
                 </button>
               ))}
@@ -168,7 +169,7 @@ export function Plan() {
                 type="button"
                 onClick={removeSelected}
                 disabled={deletePlan.isPending}
-                className="tap-target mt-2 w-full rounded-[var(--radius-control)] border border-negative/40 px-3 py-2 text-[13px] font-medium text-negative-text transition-transform active:scale-[0.98] disabled:opacity-40"
+                className="tap-target press mt-3 w-full rounded-[var(--radius-control)] border-2 border-ink bg-negative-soft px-3 py-2 font-display text-[13px] font-extrabold uppercase tracking-[0.03em] text-negative-text shadow-[var(--shadow-pop)] disabled:opacity-40 disabled:shadow-none"
               >
                 Remove plan{removableDays.length > 1 ? `s (${removableDays.length})` : ''}
               </button>
@@ -177,10 +178,10 @@ export function Plan() {
 
           {previewExercises.length > 0 && (
             <section className="flex flex-col gap-2">
-              <h2 className="text-[13px] font-semibold uppercase tracking-wide text-ink-tertiary">
+              <h2 className="eyebrow">
                 {WORKOUT_LABELS[previewKey!]} exercises
               </h2>
-              <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1">
+              <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2">
                 {previewExercises.map((ex) => (
                   <ExerciseCard
                     key={ex.id}
@@ -196,18 +197,18 @@ export function Plan() {
 
           {pendingPlan && (
             <div
-              className="animate-overlay-in fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+              className="animate-overlay-in fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4"
               onClick={() => setPendingPlan(null)}
             >
               <div
-                className="animate-dialog-in w-full max-w-xs rounded-[var(--radius-card)] border border-border bg-surface p-5"
+                className="animate-dialog-in w-full max-w-xs rounded-[var(--radius-card)] border-2 border-ink bg-surface p-5 shadow-[var(--shadow-lg)]"
                 onClick={(e) => e.stopPropagation()}
               >
                 {(() => {
                   const existing = planByDate[pendingPlan.date]
                   const changing = existing && existing !== pendingPlan.key
                   return (
-                    <p className="mb-3 text-[15px] font-semibold text-ink">
+                    <p className="headline mb-4 text-[22px] leading-[1.02]">
                       {changing
                         ? `${weekdayName(pendingPlan.date)}, ${pendingPlan.date.slice(5)} has already been planned with ${WORKOUT_LABELS[existing]}. Change to ${WORKOUT_LABELS[pendingPlan.key]}?`
                         : WORKOUT_LABELS[pendingPlan.key]}

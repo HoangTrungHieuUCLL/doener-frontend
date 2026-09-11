@@ -19,18 +19,18 @@ export function ConfirmDialog({
 }) {
   return (
     <div
-      className="animate-overlay-in fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      className="animate-overlay-in fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4"
       onClick={onCancel}
     >
       <div
         role="alertdialog"
         aria-modal="true"
-        className="animate-dialog-in w-full max-w-xs rounded-[var(--radius-card)] border border-border bg-surface p-5 shadow-[var(--shadow-card)]"
+        className="animate-dialog-in w-full max-w-xs rounded-[var(--radius-card)] border-2 border-ink bg-surface p-5 shadow-[var(--shadow-lg)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-[15px] font-semibold text-ink">{title}</p>
-        {message && <p className="mt-1 text-[13px] text-ink-secondary">{message}</p>}
-        <div className="mt-4 flex gap-2">
+        <p className="headline text-[24px]">{title}</p>
+        {message && <p className="mt-2 text-[14px] text-ink-secondary">{message}</p>}
+        <div className="mt-5 flex gap-2">
           <Button variant="secondary" size="md" className="flex-1" onClick={onCancel} disabled={pending}>
             {cancelLabel}
           </Button>
