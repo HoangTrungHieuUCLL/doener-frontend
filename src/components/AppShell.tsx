@@ -1,7 +1,7 @@
 import type { ComponentType, SVGProps } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
-import { HistoryIcon, InsightsIcon, LogoMark, PlanIcon, TodayIcon } from './icons'
+import { HistoryIcon, InsightsIcon, LogoMark, PlanIcon, TodayIcon, WorkoutIcon } from './icons'
 
 interface NavItem {
   to: string
@@ -9,9 +9,11 @@ interface NavItem {
   Icon: ComponentType<SVGProps<SVGSVGElement>>
 }
 
+// Today sits in the middle of the row; Workout is the far-left tab.
 const NAV_ITEMS: NavItem[] = [
-  { to: '/today', label: 'Today', Icon: TodayIcon },
+  { to: '/workout', label: 'Workout', Icon: WorkoutIcon },
   { to: '/plan', label: 'Plan', Icon: PlanIcon },
+  { to: '/today', label: 'Today', Icon: TodayIcon },
   { to: '/history', label: 'History', Icon: HistoryIcon },
   { to: '/insights', label: 'Insights', Icon: InsightsIcon },
 ]

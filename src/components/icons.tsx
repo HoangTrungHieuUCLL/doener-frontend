@@ -44,6 +44,16 @@ export function HistoryIcon(props: IconProps) {
   )
 }
 
+export function WorkoutIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M6.5 9.5v5M17.5 9.5v5" />
+      <path d="M4 10.5v3M20 10.5v3" />
+      <path d="M6.5 12h11" />
+    </svg>
+  )
+}
+
 export function InsightsIcon(props: IconProps) {
   return (
     <svg {...base} {...props}>

@@ -9,6 +9,7 @@ import { Today } from './pages/Today'
 import { Plan } from './pages/Plan'
 import { History } from './pages/History'
 import { Insights } from './pages/Insights'
+import { Workout } from './pages/Workout'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,6 +33,7 @@ export default function App() {
 
             <Route element={<RequireAuth />}>
               <Route element={<AppShell />}>
+                <Route path="/workout" element={<Workout />} />
                 <Route path="/today" element={<Today />} />
                 <Route path="/plan" element={<Plan />} />
                 <Route path="/history" element={<History />} />
