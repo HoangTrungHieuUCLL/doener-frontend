@@ -26,6 +26,17 @@ export function formatDayLabel(iso: string): string {
   return `${WEEKDAY[date.getDay()]} ${MONTH[date.getMonth()]} ${date.getDate()}`
 }
 
+/** Parses a full API timestamp as UTC, even when it arrives with no
+ * timezone marker. The backend always writes UTC (datetime.now(timezone.utc)),
+ * but a naive datetime can round-trip through the database (SQLite, notably)
+ * without its offset, coming back as e.g. "2026-09-11T08:47:29.100644" --
+ * `new Date(...)` on a string like that parses it as local time instead,
+ * which is wrong by exactly the viewer's UTC offset. */
+export function parseUtcTimestamp(iso: string): Date {
+  const hasTimezone = /[Zz]$|[+-]\d{2}:?\d{2}$/.test(iso)
+  return new Date(hasTimezone ? iso : `${iso}Z`)
+}
+
 /** Formats either a plain "YYYY-MM-DD" date or a full ISO timestamp (as
  * returned by session/PR endpoints) as e.g. "Sep 11". */
 export function formatShortDate(iso: string): string {

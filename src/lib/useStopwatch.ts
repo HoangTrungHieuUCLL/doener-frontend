@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { parseUtcTimestamp } from './date'
 
 /** Counts up in seconds from a given start time. */
 export function useStopwatch(startedAt: string | null) {
@@ -9,7 +10,7 @@ export function useStopwatch(startedAt: string | null) {
       setElapsedSec(0)
       return
     }
-    const start = new Date(startedAt).getTime()
+    const start = parseUtcTimestamp(startedAt).getTime()
     const tick = () => setElapsedSec(Math.max(0, Math.floor((Date.now() - start) / 1000)))
     tick()
     const id = setInterval(tick, 1000)

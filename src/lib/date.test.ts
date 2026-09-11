@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addMonths, daysInMonth, monthDates, nextWeekdayOccurrences, startOfMonth } from './date'
+import { addMonths, daysInMonth, monthDates, nextWeekdayOccurrences, parseUtcTimestamp, startOfMonth } from './date'
 
 describe('calendar month math', () => {
   it('startOfMonth returns the 1st', () => {
@@ -32,5 +32,20 @@ describe('calendar month math', () => {
   it('nextWeekdayOccurrences crosses a month boundary correctly', () => {
     const occurrences = nextWeekdayOccurrences('2026-01-26', 2)
     expect(occurrences).toEqual(['2026-02-02', '2026-02-09'])
+  })
+
+  it('parseUtcTimestamp treats a timezone-less timestamp as UTC', () => {
+    expect(parseUtcTimestamp('2026-09-11T08:47:29.100644').getTime()).toBe(
+      Date.parse('2026-09-11T08:47:29.100644Z'),
+    )
+  })
+
+  it('parseUtcTimestamp leaves an explicit timezone alone', () => {
+    expect(parseUtcTimestamp('2026-09-11T08:47:29Z').getTime()).toBe(
+      Date.parse('2026-09-11T08:47:29Z'),
+    )
+    expect(parseUtcTimestamp('2026-09-11T08:47:29+02:00').getTime()).toBe(
+      Date.parse('2026-09-11T08:47:29+02:00'),
+    )
   })
 })
