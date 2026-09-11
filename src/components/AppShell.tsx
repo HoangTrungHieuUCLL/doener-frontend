@@ -1,7 +1,7 @@
 import type { ComponentType, SVGProps } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
-import { HistoryIcon, InsightsIcon, LogoMark, PlanIcon, TodayIcon, TogetherIcon } from './icons'
+import { HistoryIcon, InsightsIcon, LogoMark, PlanIcon, TodayIcon } from './icons'
 
 interface NavItem {
   to: string
@@ -14,11 +14,11 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/plan', label: 'Plan', Icon: PlanIcon },
   { to: '/history', label: 'History', Icon: HistoryIcon },
   { to: '/insights', label: 'Insights', Icon: InsightsIcon },
-  { to: '/together', label: 'Together', Icon: TogetherIcon },
 ]
 
 export function AppShell() {
   const { user, logout } = useAuth()
+  const location = useLocation()
 
   return (
     <div className="flex min-h-dvh w-full flex-col md:flex-row">
@@ -73,7 +73,7 @@ export function AppShell() {
         </header>
 
         <main className="flex-1 overflow-y-auto pb-24 md:pb-8">
-          <div className="mx-auto w-full max-w-3xl px-4 py-5 md:px-8 md:py-8">
+          <div key={location.pathname} className="animate-page-in mx-auto w-full max-w-3xl px-4 py-5 md:px-8 md:py-8">
             <Outlet />
           </div>
         </main>

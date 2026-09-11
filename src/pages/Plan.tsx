@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useExercises } from '../api/hooks/useExercises'
-import { usePlan, useSetPlan } from '../api/hooks/usePlan'
+import { useDeletePlan, usePlan, useSetPlan } from '../api/hooks/usePlan'
 import type { WorkoutKey } from '../api/types'
 import { Card } from '../components/ui/Card'
 import { Calendar } from '../components/ui/Calendar'
@@ -30,6 +30,7 @@ export function Plan() {
   const to = dates[dates.length - 1]
   const { data: planEntries, isLoading } = usePlan(from, to)
   const setPlan = useSetPlan()
+  const deletePlan = useDeletePlan()
   const { data: exercises } = useExercises()
 
   const planByDate = useMemo(() => {
@@ -78,6 +79,13 @@ export function Plan() {
     const dates = [pendingPlan.date, ...nextWeekdayOccurrences(pendingPlan.date, REPEAT_WEEKS)]
     await Promise.all(dates.map((date) => setPlan.mutateAsync({ date, workout_key: pendingPlan.key })))
     setPendingPlan(null)
+    setSelectedDays([])
+  }
+
+  const removableDays = selectedDays.filter((d) => planByDate[d])
+
+  async function removeSelected() {
+    await Promise.all(removableDays.map((date) => deletePlan.mutateAsync(date)))
     setSelectedDays([])
   }
 
@@ -155,6 +163,16 @@ export function Plan() {
                 </button>
               ))}
             </div>
+            {removableDays.length > 0 && (
+              <button
+                type="button"
+                onClick={removeSelected}
+                disabled={deletePlan.isPending}
+                className="tap-target mt-2 w-full rounded-[var(--radius-control)] border border-negative/40 px-3 py-2 text-[13px] font-medium text-negative-text transition-transform active:scale-[0.98] disabled:opacity-40"
+              >
+                Remove plan{removableDays.length > 1 ? `s (${removableDays.length})` : ''}
+              </button>
+            )}
           </Card>
 
           {previewExercises.length > 0 && (
@@ -178,14 +196,24 @@ export function Plan() {
 
           {pendingPlan && (
             <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+              className="animate-overlay-in fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
               onClick={() => setPendingPlan(null)}
             >
               <div
-                className="w-full max-w-xs rounded-[var(--radius-card)] border border-border bg-surface p-5"
+                className="animate-dialog-in w-full max-w-xs rounded-[var(--radius-card)] border border-border bg-surface p-5"
                 onClick={(e) => e.stopPropagation()}
               >
-                <p className="mb-3 text-[15px] font-semibold text-ink">{WORKOUT_LABELS[pendingPlan.key]}</p>
+                {(() => {
+                  const existing = planByDate[pendingPlan.date]
+                  const changing = existing && existing !== pendingPlan.key
+                  return (
+                    <p className="mb-3 text-[15px] font-semibold text-ink">
+                      {changing
+                        ? `${weekdayName(pendingPlan.date)}, ${pendingPlan.date.slice(5)} has already been planned with ${WORKOUT_LABELS[existing]}. Change to ${WORKOUT_LABELS[pendingPlan.key]}?`
+                        : WORKOUT_LABELS[pendingPlan.key]}
+                    </p>
+                  )
+                })()}
                 <div className="flex flex-col gap-2">
                   <Button size="md" onClick={planForThisDate} disabled={setPlan.isPending}>
                     Plan for {weekdayName(pendingPlan.date)}, {pendingPlan.date.slice(5)}

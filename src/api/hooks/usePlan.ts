@@ -25,4 +25,14 @@ export function useSetPlan() {
   })
 }
 
+export function useDeletePlan() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (date: string) => api.delete<void>(`/plan?date=${date}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plan'] })
+    },
+  })
+}
+
 export type { WorkoutKey }

@@ -60,11 +60,11 @@ export function Today() {
       <div className="flex flex-col items-center gap-8 pt-8 text-center">
         <header>
           <h1 className="text-[24px] font-semibold text-ink">Today</h1>
-          <p className="text-[14px] text-ink-secondary">
-            {plannedKey
-              ? `Your plan says ${WORKOUT_LABELS[plannedKey]} today.`
-              : 'Nothing planned for today — head to Plan to assign a workout.'}
-          </p>
+          {!plannedKey && (
+            <p className="text-[14px] text-ink-secondary">
+              Nothing planned for today — head to Plan to assign a workout.
+            </p>
+          )}
         </header>
 
         {plannedKey && <StartButton label={`Start ${WORKOUT_LABELS[plannedKey]}`} onStart={beginSession} />}
@@ -106,10 +106,10 @@ function StartButton({ label, onStart }: { label: string; onStart: () => void })
       type="button"
       onClick={() => setActive((a) => !a)}
       aria-label={active ? 'Cancel start' : label}
-      className="relative flex h-36 w-36 items-center justify-center rounded-full bg-accent-strong text-white transition-colors"
+      className="relative flex h-64 w-64 max-h-[75vw] max-w-[75vw] items-center justify-center rounded-full bg-accent-strong p-6 text-center text-white transition-transform active:scale-[0.97]"
     >
       <svg className="absolute inset-0 -rotate-90" viewBox="0 0 120 120">
-        <circle cx="60" cy="60" r={radius} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="6" />
+        <circle cx="60" cy="60" r={radius} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="5" />
         {active && (
           <circle
             cx="60"
@@ -117,7 +117,7 @@ function StartButton({ label, onStart }: { label: string; onStart: () => void })
             r={radius}
             fill="none"
             stroke="white"
-            strokeWidth="6"
+            strokeWidth="5"
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={circumference * (1 - progress)}
@@ -125,7 +125,7 @@ function StartButton({ label, onStart }: { label: string; onStart: () => void })
           />
         )}
       </svg>
-      <span className="text-[20px] font-semibold tabular-nums">
+      <span className="text-[32px] font-semibold tabular-nums">
         {active ? (remaining > 0 ? remaining : 'Go!') : label}
       </span>
     </button>
@@ -251,7 +251,7 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
             type="button"
             onClick={togglePause}
             aria-label={isPaused ? 'Resume workout' : 'Pause workout'}
-            className="tap-target flex items-center justify-center rounded-full border border-border text-ink-secondary hover:bg-surface-alt"
+            className="tap-target flex items-center justify-center rounded-full border border-border text-ink-secondary transition-transform active:scale-[0.94] hover:bg-surface-alt"
           >
             {isPaused ? (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -267,7 +267,7 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
             type="button"
             onClick={() => setConfirmReset(true)}
             aria-label="Reset workout"
-            className="tap-target flex items-center justify-center rounded-full border border-border text-ink-secondary hover:bg-surface-alt"
+            className="tap-target flex items-center justify-center rounded-full border border-border text-ink-secondary transition-transform active:scale-[0.94] hover:bg-surface-alt"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 12a9 9 0 1 1 3 6.7M3 12v5h5" strokeLinecap="round" strokeLinejoin="round" />
@@ -418,7 +418,7 @@ function Stepper({
           type="button"
           aria-label={`Decrease ${label}`}
           onClick={() => onChange(Math.max(min, round1(value - step)))}
-          className="tap-target flex items-center justify-center rounded-full border border-border text-ink-secondary hover:bg-surface-alt"
+          className="tap-target flex items-center justify-center rounded-full border border-border text-ink-secondary transition-transform active:scale-[0.94] hover:bg-surface-alt"
         >
           −
         </button>
@@ -427,7 +427,7 @@ function Stepper({
           type="button"
           aria-label={`Increase ${label}`}
           onClick={() => onChange(round1(value + step))}
-          className="tap-target flex items-center justify-center rounded-full border border-border text-ink-secondary hover:bg-surface-alt"
+          className="tap-target flex items-center justify-center rounded-full border border-border text-ink-secondary transition-transform active:scale-[0.94] hover:bg-surface-alt"
         >
           +
         </button>

@@ -44,17 +44,6 @@ export function HistoryIcon(props: IconProps) {
   )
 }
 
-export function TogetherIcon(props: IconProps) {
-  return (
-    <svg {...base} {...props}>
-      <circle cx="9" cy="8.5" r="3" />
-      <circle cx="16.5" cy="9.5" r="2.4" />
-      <path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" />
-      <path d="M14.8 14.3c2.4.2 4.2 1.9 4.2 4.7" />
-    </svg>
-  )
-}
-
 export function InsightsIcon(props: IconProps) {
   return (
     <svg {...base} {...props}>

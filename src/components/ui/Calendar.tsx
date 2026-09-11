@@ -35,7 +35,7 @@ export function Calendar({
         <button
           type="button"
           aria-label="Previous month"
-          className="tap-target flex items-center justify-center rounded-[var(--radius-control)] text-ink-secondary hover:bg-surface-alt"
+          className="tap-target flex items-center justify-center rounded-[var(--radius-control)] text-ink-secondary transition-transform active:scale-[0.94] hover:bg-surface-alt"
           onClick={() => onMonthChange(addMonths(month, -1))}
         >
           ‹
@@ -46,7 +46,7 @@ export function Calendar({
         <button
           type="button"
           aria-label="Next month"
-          className="tap-target flex items-center justify-center rounded-[var(--radius-control)] text-ink-secondary hover:bg-surface-alt"
+          className="tap-target flex items-center justify-center rounded-[var(--radius-control)] text-ink-secondary transition-transform active:scale-[0.94] hover:bg-surface-alt"
           onClick={() => onMonthChange(addMonths(month, 1))}
         >
           ›
@@ -59,7 +59,7 @@ export function Calendar({
         ))}
       </div>
 
-      <div className="mt-1 grid grid-cols-7 gap-1">
+      <div key={`${month.getFullYear()}-${month.getMonth()}`} className="animate-page-in mt-1 grid grid-cols-7 gap-1">
         {leadingBlanks.map((k) => (
           <div key={k} />
         ))}
