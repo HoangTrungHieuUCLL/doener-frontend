@@ -1,17 +1,9 @@
 import { useTogether } from '../api/hooks/useTogether'
-import type { TogetherEntry, WorkoutKey } from '../api/types'
+import type { TogetherEntry } from '../api/types'
 import { Badge } from '../components/ui/Badge'
 import { Card } from '../components/ui/Card'
 import { formatShortDate } from '../lib/date'
-
-const WORKOUT_LABELS: Record<WorkoutKey, string> = {
-  A: 'Workout A',
-  B: 'Workout B',
-  C: 'Workout C',
-  cardio: 'Cardio',
-  rest: 'Rest',
-  custom: 'Custom',
-}
+import { WORKOUT_LABELS } from '../lib/workouts'
 
 /** Deterministic person-tone assignment (hash of user_id -> two muted
  * tones), so the same person always renders the same color across

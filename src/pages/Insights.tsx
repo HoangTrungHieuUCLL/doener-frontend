@@ -6,6 +6,7 @@ import type { WorkoutKey } from '../api/types'
 import { Card } from '../components/ui/Card'
 import { Calendar } from '../components/ui/Calendar'
 import { formatShortDate, monthDates, todayISO } from '../lib/date'
+import { WORKOUT_LABELS } from '../lib/workouts'
 
 const CATEGORY_COLOR: Record<string, string> = {
   A: 'var(--color-accent)',
@@ -155,7 +156,7 @@ function VolumeByCategoryChart() {
         {(['A', 'B', 'C', 'cardio'] as WorkoutKey[]).map((key) => (
           <span key={key} className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full" style={{ background: CATEGORY_COLOR[key] }} />
-            {key === 'cardio' ? 'Cardio' : `Workout ${key}`}
+            {WORKOUT_LABELS[key]}
           </span>
         ))}
       </div>

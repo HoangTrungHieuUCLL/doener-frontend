@@ -59,3 +59,11 @@ export function monthDates(date: Date): string[] {
   const count = daysInMonth(date)
   return Array.from({ length: count }, (_, i) => toISODate(addDays(first, i)))
 }
+
+/** The next `count` dates that fall on the same weekday as `iso` (weekly
+ * cadence), not including `iso` itself. */
+export function nextWeekdayOccurrences(iso: string, count: number): string[] {
+  const [y, m, d] = iso.split('-').map(Number)
+  const base = new Date(y, m - 1, d)
+  return Array.from({ length: count }, (_, i) => toISODate(addDays(base, 7 * (i + 1))))
+}

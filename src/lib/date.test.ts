@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addMonths, daysInMonth, monthDates, startOfMonth } from './date'
+import { addMonths, daysInMonth, monthDates, nextWeekdayOccurrences, startOfMonth } from './date'
 
 describe('calendar month math', () => {
   it('startOfMonth returns the 1st', () => {
@@ -22,5 +22,15 @@ describe('calendar month math', () => {
     expect(dates).toHaveLength(30)
     expect(dates[0]).toBe('2025-04-01')
     expect(dates[29]).toBe('2025-04-30')
+  })
+
+  it('nextWeekdayOccurrences steps by 7 days and excludes the starting date', () => {
+    const occurrences = nextWeekdayOccurrences('2026-01-05', 3) // a Monday
+    expect(occurrences).toEqual(['2026-01-12', '2026-01-19', '2026-01-26'])
+  })
+
+  it('nextWeekdayOccurrences crosses a month boundary correctly', () => {
+    const occurrences = nextWeekdayOccurrences('2026-01-26', 2)
+    expect(occurrences).toEqual(['2026-02-02', '2026-02-09'])
   })
 })

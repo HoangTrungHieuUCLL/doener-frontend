@@ -20,13 +20,7 @@ import { ExerciseCard } from '../components/ui/ExerciseCard'
 import { todayISO } from '../lib/date'
 import { formatDuration, usePausableStopwatch } from '../lib/useStopwatch'
 import { useLocalStorageState } from '../lib/useLocalStorageState'
-
-const WORKOUT_LABELS: Record<SessionWorkoutKey, string> = {
-  A: 'Workout A',
-  B: 'Workout B',
-  C: 'Workout C',
-  cardio: 'Cardio',
-}
+import { WORKOUT_LABELS } from '../lib/workouts'
 
 const SESSION_WORKOUT_KEYS: SessionWorkoutKey[] = ['A', 'B', 'C', 'cardio']
 
@@ -161,6 +155,7 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
   const { data: lastSets } = useLastSets()
   const [restTimer, setRestTimer] = useState<{ key: number; durationSec: number } | null>(null)
   const [newPrIds, setNewPrIds] = useState<Record<number, boolean>>({})
+  const [viewMode, setViewMode] = useLocalStorageState<'focus' | 'list'>('doener.todayView', 'focus')
 
   const lastSetByExercise = useMemo(() => {
     const map: Record<number, LastSet> = {}
@@ -176,6 +171,27 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
     () => exercises.filter((e) => e.category === workoutKey).sort((a, b) => a.id - b.id),
     [exercises, workoutKey],
   )
+
+  // One-at-a-time queue: warm-up first, then the main workout. Cardio has no
+  // exercise list (just CardioForm), so it never uses focus mode.
+  const queue = useMemo(
+    () => (workoutKey === 'cardio' ? [] : [...warmupExercises, ...mainExercises]),
+    [workoutKey, warmupExercises, mainExercises],
+  )
+  const warmupIds = useMemo(() => new Set(warmupExercises.map((e) => e.id)), [warmupExercises])
+
+  // Derived purely from logged sets -- no separate "current exercise" state
+  // to keep in sync. The moment enough sets are logged for the exercise in
+  // front, the next incomplete one in the queue becomes current.
+  const currentIndex = useMemo(() => {
+    let i = 0
+    while (i < queue.length) {
+      const done = loggedSets.filter((s) => s.exercise_id === queue[i].id).length
+      if (done < queue[i].sets) break
+      i++
+    }
+    return i
+  }, [queue, loggedSets])
 
   function handleSetLogged(exerciseId: number, restSec: number, isWarmup: boolean, isNewPr: boolean) {
     if (isNewPr) {
@@ -221,6 +237,23 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
         </div>
       </header>
 
+      {workoutKey !== 'cardio' && (
+        <div className="flex gap-1 rounded-[var(--radius-control)] bg-surface-alt p-1">
+          {(['focus', 'list'] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setViewMode(mode)}
+              className={`tap-target flex-1 rounded-[calc(var(--radius-control)-4px)] text-[13px] font-medium capitalize transition-colors ${
+                viewMode === mode ? 'bg-surface text-ink shadow-sm' : 'text-ink-tertiary'
+              }`}
+            >
+              {mode}
+            </button>
+          ))}
+        </div>
+      )}
+
       {restTimer && (
         <RestTimer
           restartKey={restTimer.key}
@@ -229,42 +262,73 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
         />
       )}
 
-      {warmupExercises.length > 0 && (
-        <Section title="Warm-up">
-          {warmupExercises.map((ex) => (
-            <ExerciseLogCard
-              key={ex.id}
-              exercise={ex}
-              sessionId={sessionId}
-              loggedSets={loggedSets.filter((s) => s.exercise_id === ex.id)}
-              lastSet={lastSetByExercise[ex.id] ?? null}
-              isNewPr={Boolean(newPrIds[ex.id])}
-              onLogged={(isNewPr) => handleSetLogged(ex.id, ex.rest_sec, true, isNewPr)}
-            />
-          ))}
-        </Section>
-      )}
-
       {workoutKey === 'cardio' ? (
         <Section title="Cardio">
           <CardioForm sessionId={sessionId} />
         </Section>
+      ) : viewMode === 'list' ? (
+        <>
+          {warmupExercises.length > 0 && (
+            <Section title="Warm-up">
+              {warmupExercises.map((ex) => (
+                <ExerciseLogCard
+                  key={ex.id}
+                  exercise={ex}
+                  sessionId={sessionId}
+                  loggedSets={loggedSets.filter((s) => s.exercise_id === ex.id)}
+                  lastSet={lastSetByExercise[ex.id] ?? null}
+                  isNewPr={Boolean(newPrIds[ex.id])}
+                  onLogged={(isNewPr) => handleSetLogged(ex.id, ex.rest_sec, true, isNewPr)}
+                />
+              ))}
+            </Section>
+          )}
+          {mainExercises.length > 0 && (
+            <Section title={WORKOUT_LABELS[workoutKey]}>
+              {mainExercises.map((ex) => (
+                <ExerciseLogCard
+                  key={ex.id}
+                  exercise={ex}
+                  sessionId={sessionId}
+                  loggedSets={loggedSets.filter((s) => s.exercise_id === ex.id)}
+                  lastSet={lastSetByExercise[ex.id] ?? null}
+                  isNewPr={Boolean(newPrIds[ex.id])}
+                  onLogged={(isNewPr) => handleSetLogged(ex.id, ex.rest_sec, false, isNewPr)}
+                />
+              ))}
+            </Section>
+          )}
+        </>
+      ) : currentIndex < queue.length ? (
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center justify-between text-[12px] font-medium text-ink-tertiary">
+            <span>{warmupIds.has(queue[currentIndex].id) ? 'Warm-up' : WORKOUT_LABELS[workoutKey]}</span>
+            <span>
+              {currentIndex + 1} of {queue.length}
+            </span>
+          </div>
+          <div className="h-1 w-full overflow-hidden rounded-full bg-surface-alt">
+            <div
+              className="h-full rounded-full bg-accent transition-all"
+              style={{ width: `${((currentIndex + 1) / queue.length) * 100}%` }}
+            />
+          </div>
+          <ExerciseLogCard
+            key={queue[currentIndex].id}
+            exercise={queue[currentIndex]}
+            sessionId={sessionId}
+            loggedSets={loggedSets.filter((s) => s.exercise_id === queue[currentIndex].id)}
+            lastSet={lastSetByExercise[queue[currentIndex].id] ?? null}
+            isNewPr={Boolean(newPrIds[queue[currentIndex].id])}
+            onLogged={(isNewPr) =>
+              handleSetLogged(queue[currentIndex].id, queue[currentIndex].rest_sec, warmupIds.has(queue[currentIndex].id), isNewPr)
+            }
+          />
+        </section>
       ) : (
-        mainExercises.length > 0 && (
-          <Section title={WORKOUT_LABELS[workoutKey]}>
-            {mainExercises.map((ex) => (
-              <ExerciseLogCard
-                key={ex.id}
-                exercise={ex}
-                sessionId={sessionId}
-                loggedSets={loggedSets.filter((s) => s.exercise_id === ex.id)}
-                lastSet={lastSetByExercise[ex.id] ?? null}
-                isNewPr={Boolean(newPrIds[ex.id])}
-                onLogged={(isNewPr) => handleSetLogged(ex.id, ex.rest_sec, false, isNewPr)}
-              />
-            ))}
-          </Section>
-        )
+        <p className="py-6 text-center text-[15px] font-medium text-ink-secondary">
+          All exercises done — ready to finish.
+        </p>
       )}
 
       <Button size="lg" variant="primary" onClick={handleFinish} disabled={finishSession.isPending}>

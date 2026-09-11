@@ -2,18 +2,11 @@ import { useState } from 'react'
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { PAGE_SIZE, useSessionsList } from '../api/hooks/useSessions'
 import { usePrStats, useVolumeStats } from '../api/hooks/useStats'
-import type { SessionWorkoutKey } from '../api/types'
 import { Badge } from '../components/ui/Badge'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { formatShortDate } from '../lib/date'
-
-const WORKOUT_LABELS: Record<SessionWorkoutKey, string> = {
-  A: 'Workout A',
-  B: 'Workout B',
-  C: 'Workout C',
-  cardio: 'Cardio',
-}
+import { WORKOUT_LABELS } from '../lib/workouts'
 
 export function History() {
   return (

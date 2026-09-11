@@ -19,7 +19,8 @@ export function Calendar({
 }: {
   month: Date
   onMonthChange: (month: Date) => void
-  selected?: string | null
+  /** A single selected date, several (multi-select), or none. */
+  selected?: string | string[] | null
   onSelectDay?: (iso: string) => void
   renderDay?: (iso: string) => ReactNode
 }) {
@@ -65,7 +66,7 @@ export function Calendar({
         {dates.map((iso) => {
           const day = Number(iso.slice(8, 10))
           const isToday = iso === today
-          const isSelected = iso === selected
+          const isSelected = Array.isArray(selected) ? selected.includes(iso) : iso === selected
           return (
             <button
               key={iso}
