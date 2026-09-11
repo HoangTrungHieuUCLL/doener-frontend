@@ -10,7 +10,6 @@ import { monthDates, nextWeekdayOccurrences, todayISO, WEEKDAY_NAMES } from '../
 import { WORKOUT_DOT, WORKOUT_LABELS, WORKOUT_OPTIONS, targetLabel } from '../lib/workouts'
 
 const PREVIEWABLE_KEYS: WorkoutKey[] = ['A', 'B', 'C']
-
 const REPEAT_WEEKS = 8
 
 function weekdayName(iso: string): string {
@@ -20,8 +19,11 @@ function weekdayName(iso: string): string {
 
 export function Plan() {
   const [month, setMonth] = useState(() => new Date())
+  const [multiSelect, setMultiSelect] = useState(false)
   const [selectedDays, setSelectedDays] = useState<string[]>([todayISO()])
-  const [repeatPrompt, setRepeatPrompt] = useState<{ date: string; key: WorkoutKey } | null>(null)
+  // Single-day mode only: which workout was just picked, awaiting the
+  // this-date-vs-every-weekday-vs-cancel choice.
+  const [pendingPlan, setPendingPlan] = useState<{ date: string; key: WorkoutKey } | null>(null)
 
   const dates = useMemo(() => monthDates(month), [month])
   const from = dates[0]
@@ -38,23 +40,45 @@ export function Plan() {
     return map
   }, [planEntries])
 
-  function toggleDay(iso: string) {
-    setSelectedDays((prev) => (prev.includes(iso) ? prev.filter((d) => d !== iso) : [...prev, iso]))
-    setRepeatPrompt(null)
+  function toggleMultiSelect() {
+    setMultiSelect((prev) => !prev)
+    setSelectedDays([])
   }
 
-  async function assign(key: WorkoutKey) {
-    await Promise.all(selectedDays.map((date) => setPlan.mutateAsync({ date, workout_key: key })))
-    if (selectedDays.length === 1) {
-      setRepeatPrompt({ date: selectedDays[0], key })
+  function selectDay(iso: string) {
+    if (multiSelect) {
+      setSelectedDays((prev) => (prev.includes(iso) ? prev.filter((d) => d !== iso) : [...prev, iso]))
+    } else {
+      setSelectedDays((prev) => (prev[0] === iso ? [] : [iso]))
     }
   }
 
-  async function confirmRepeat() {
-    if (!repeatPrompt) return
-    const dates = nextWeekdayOccurrences(repeatPrompt.date, REPEAT_WEEKS)
-    await Promise.all(dates.map((date) => setPlan.mutateAsync({ date, workout_key: repeatPrompt.key })))
-    setRepeatPrompt(null)
+  function pickWorkout(key: WorkoutKey) {
+    if (multiSelect) {
+      assignToSelected(key)
+    } else {
+      setPendingPlan({ date: selectedDays[0], key })
+    }
+  }
+
+  async function assignToSelected(key: WorkoutKey) {
+    await Promise.all(selectedDays.map((date) => setPlan.mutateAsync({ date, workout_key: key })))
+    setSelectedDays([])
+  }
+
+  async function planForThisDate() {
+    if (!pendingPlan) return
+    await setPlan.mutateAsync({ date: pendingPlan.date, workout_key: pendingPlan.key })
+    setPendingPlan(null)
+    setSelectedDays([])
+  }
+
+  async function planForEveryWeekday() {
+    if (!pendingPlan) return
+    const dates = [pendingPlan.date, ...nextWeekdayOccurrences(pendingPlan.date, REPEAT_WEEKS)]
+    await Promise.all(dates.map((date) => setPlan.mutateAsync({ date, workout_key: pendingPlan.key })))
+    setPendingPlan(null)
+    setSelectedDays([])
   }
 
   const previewKey = selectedDays.length === 1 ? planByDate[selectedDays[0]] : null
@@ -71,7 +95,7 @@ export function Plan() {
       <header>
         <h1 className="text-[24px] font-semibold text-ink">Plan</h1>
         <p className="text-[14px] text-ink-secondary">
-          Tap one or more days, then pick a workout for all of them.
+          {multiSelect ? 'Tap days, then pick a workout for all of them.' : 'Tap a day, then pick a workout.'}
         </p>
       </header>
 
@@ -80,11 +104,26 @@ export function Plan() {
       ) : (
         <>
           <Card>
+            <div className="mb-3 flex items-center justify-between">
+              <label className="flex items-center gap-2 text-[13px] font-medium text-ink-secondary">
+                <input type="checkbox" checked={multiSelect} onChange={toggleMultiSelect} className="h-4 w-4" />
+                Choose multiple dates
+              </label>
+              {selectedDays.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedDays([])}
+                  className="text-[13px] font-medium text-accent-strong"
+                >
+                  Clear selection
+                </button>
+              )}
+            </div>
             <Calendar
               month={month}
               onMonthChange={setMonth}
               selected={selectedDays}
-              onSelectDay={toggleDay}
+              onSelectDay={selectDay}
               renderDay={(iso) => {
                 const key = planByDate[iso]
                 return key ? <span className={`h-1.5 w-1.5 rounded-full ${WORKOUT_DOT[key]}`} /> : null
@@ -104,7 +143,7 @@ export function Plan() {
               {WORKOUT_OPTIONS.map((key) => (
                 <button
                   key={key}
-                  onClick={() => assign(key)}
+                  onClick={() => pickWorkout(key)}
                   disabled={setPlan.isPending || selectedDays.length === 0}
                   className={`tap-target rounded-[var(--radius-control)] border px-3 py-2 text-[13px] font-medium disabled:opacity-40 ${
                     selectedDays.length === 1 && planByDate[selectedDays[0]] === key
@@ -137,21 +176,29 @@ export function Plan() {
             </section>
           )}
 
-          {repeatPrompt && (
-            <Card className="flex items-center justify-between gap-3">
-              <p className="text-[14px] text-ink">
-                Repeat {WORKOUT_LABELS[repeatPrompt.key]} every {weekdayName(repeatPrompt.date)} for the
-                next {REPEAT_WEEKS} weeks?
-              </p>
-              <div className="flex shrink-0 gap-2">
-                <Button variant="secondary" size="md" onClick={() => setRepeatPrompt(null)}>
-                  No
-                </Button>
-                <Button size="md" onClick={confirmRepeat} disabled={setPlan.isPending}>
-                  Yes
-                </Button>
+          {pendingPlan && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+              onClick={() => setPendingPlan(null)}
+            >
+              <div
+                className="w-full max-w-xs rounded-[var(--radius-card)] border border-border bg-surface p-5"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <p className="mb-3 text-[15px] font-semibold text-ink">{WORKOUT_LABELS[pendingPlan.key]}</p>
+                <div className="flex flex-col gap-2">
+                  <Button size="md" onClick={planForThisDate} disabled={setPlan.isPending}>
+                    Plan for {weekdayName(pendingPlan.date)}, {pendingPlan.date.slice(5)}
+                  </Button>
+                  <Button size="md" onClick={planForEveryWeekday} disabled={setPlan.isPending}>
+                    Plan for every {weekdayName(pendingPlan.date)}
+                  </Button>
+                  <Button variant="secondary" size="md" onClick={() => setPendingPlan(null)}>
+                    Cancel
+                  </Button>
+                </div>
               </div>
-            </Card>
+            </div>
           )}
         </>
       )}

@@ -19,11 +19,9 @@ import { Card } from '../components/ui/Card'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { ExerciseCard } from '../components/ui/ExerciseCard'
 import { todayISO } from '../lib/date'
-import { formatDuration, usePausableStopwatch } from '../lib/useStopwatch'
+import { formatDuration, useCountdown, usePausableStopwatch } from '../lib/useStopwatch'
 import { useLocalStorageState } from '../lib/useLocalStorageState'
 import { WORKOUT_LABELS, targetLabel } from '../lib/workouts'
-
-const SESSION_WORKOUT_KEYS: SessionWorkoutKey[] = ['A', 'B', 'C', 'cardio']
 
 function isSessionWorkoutKey(key: string | undefined | null): key is SessionWorkoutKey {
   return key === 'A' || key === 'B' || key === 'C' || key === 'cardio'
@@ -42,20 +40,11 @@ export function Today() {
 
   const planWorkoutKey = planEntries?.find((p) => p.date === today)?.workout_key ?? null
   const plannedKey = isSessionWorkoutKey(planWorkoutKey) ? planWorkoutKey : null
-  const [pickedKey, setPickedKey] = useState<SessionWorkoutKey>(plannedKey ?? 'A')
-  const [confirmOverride, setConfirmOverride] = useState(false)
 
-  async function beginSession(key: SessionWorkoutKey) {
-    const res = await startSession.mutateAsync(key)
+  async function beginSession() {
+    if (!plannedKey) return
+    const res = await startSession.mutateAsync(plannedKey)
     setActiveSessionId(res.id)
-  }
-
-  function handleStartClick() {
-    if (plannedKey && pickedKey !== plannedKey) {
-      setConfirmOverride(true)
-      return
-    }
-    beginSession(pickedKey)
   }
 
   function handleEndSession() {
@@ -68,51 +57,17 @@ export function Today() {
 
   if (activeSessionId === null || !session) {
     return (
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col items-center gap-8 pt-8 text-center">
         <header>
           <h1 className="text-[24px] font-semibold text-ink">Today</h1>
           <p className="text-[14px] text-ink-secondary">
             {plannedKey
               ? `Your plan says ${WORKOUT_LABELS[plannedKey]} today.`
-              : planWorkoutKey
-                ? `Your plan says "${planWorkoutKey}" today — pick a workout to log.`
-                : 'No plan set for today — pick a workout to start.'}
+              : 'Nothing planned for today — head to Plan to assign a workout.'}
           </p>
         </header>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {SESSION_WORKOUT_KEYS.map((key) => (
-            <button
-              key={key}
-              onClick={() => setPickedKey(key)}
-              className={`tap-target rounded-[var(--radius-card)] border px-3 py-4 text-[15px] font-medium transition-colors ${
-                pickedKey === key
-                  ? 'border-accent bg-accent-soft text-accent-strong'
-                  : 'border-border bg-surface text-ink-secondary'
-              }`}
-            >
-              {WORKOUT_LABELS[key]}
-            </button>
-          ))}
-        </div>
-
-        <Button size="lg" onClick={handleStartClick} disabled={startSession.isPending}>
-          {startSession.isPending ? 'Starting…' : `Start ${WORKOUT_LABELS[pickedKey]}`}
-        </Button>
-
-        {confirmOverride && (
-          <ConfirmDialog
-            title={`Log ${WORKOUT_LABELS[pickedKey]} instead?`}
-            message={`Your plan says ${WORKOUT_LABELS[plannedKey!]} today.`}
-            confirmLabel="Log it"
-            cancelLabel="Cancel"
-            onConfirm={() => {
-              setConfirmOverride(false)
-              beginSession(pickedKey)
-            }}
-            onCancel={() => setConfirmOverride(false)}
-          />
-        )}
+        {plannedKey && <StartButton label={`Start ${WORKOUT_LABELS[plannedKey]}`} onStart={beginSession} />}
       </div>
     )
   }
@@ -127,11 +82,53 @@ export function Today() {
       workoutKey={session.workout_key}
       startedAt={session.started_at}
       loggedSets={session.sets}
-      hasCardio={session.cardio !== null}
       exercises={exercises ?? []}
       onReset={handleEndSession}
-      onSwitched={(newSessionId) => setActiveSessionId(newSessionId)}
     />
+  )
+}
+
+/** A circular "Start" button that, on tap, becomes a 3-2-1 countdown ring
+ * (tap again to cancel) before actually starting the session. */
+function StartButton({ label, onStart }: { label: string; onStart: () => void }) {
+  const [active, setActive] = useState(false)
+  const remaining = useCountdown(active ? 3 : 0, 0, () => {
+    setActive(false)
+    onStart()
+  })
+
+  const radius = 54
+  const circumference = 2 * Math.PI * radius
+  const progress = active ? (3 - remaining) / 3 : 0
+
+  return (
+    <button
+      type="button"
+      onClick={() => setActive((a) => !a)}
+      aria-label={active ? 'Cancel start' : label}
+      className="relative flex h-36 w-36 items-center justify-center rounded-full bg-accent-strong text-white transition-colors"
+    >
+      <svg className="absolute inset-0 -rotate-90" viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r={radius} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="6" />
+        {active && (
+          <circle
+            cx="60"
+            cy="60"
+            r={radius}
+            fill="none"
+            stroke="white"
+            strokeWidth="6"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={circumference * (1 - progress)}
+            style={{ transition: 'stroke-dashoffset 1s linear' }}
+          />
+        )}
+      </svg>
+      <span className="text-[20px] font-semibold tabular-nums">
+        {active ? (remaining > 0 ? remaining : 'Go!') : label}
+      </span>
+    </button>
   )
 }
 
@@ -169,50 +166,24 @@ interface ActiveSessionProps {
   workoutKey: SessionWorkoutKey
   startedAt: string
   loggedSets: SessionSetDetail[]
-  hasCardio: boolean
   exercises: Exercise[]
   /** Session was reset (finished as-is); parent should forget this session id. */
   onReset: () => void
-  /** Session was switched to a different workout; parent should adopt the new session id. */
-  onSwitched: (newSessionId: number) => void
 }
 
-function ActiveSession({
-  sessionId,
-  workoutKey,
-  startedAt,
-  loggedSets,
-  hasCardio,
-  exercises,
-  onReset,
-  onSwitched,
-}: ActiveSessionProps) {
+function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises, onReset }: ActiveSessionProps) {
   const { displaySec, activeSec, isPaused, toggle: togglePause } = usePausableStopwatch(startedAt)
   const finishSession = useFinishSession()
-  const startSession = useStartSession()
   const { data: lastSets } = useLastSets()
   const [restTimer, setRestTimer] = useState<{ key: number; durationSec: number } | null>(null)
   const [newPrIds, setNewPrIds] = useState<Record<number, boolean>>({})
   const [viewMode, setViewMode] = useLocalStorageState<'focus' | 'list'>('doener.todayView', 'focus')
   const [confirmReset, setConfirmReset] = useState(false)
-  const [pickingWorkout, setPickingWorkout] = useState(false)
-  const [confirmSwitchTo, setConfirmSwitchTo] = useState<SessionWorkoutKey | null>(null)
-
-  const hasProgress = loggedSets.length > 0 || hasCardio
 
   async function handleReset() {
     await finishSession.mutateAsync({ sessionId, duration_sec: activeSec })
     setConfirmReset(false)
     onReset()
-  }
-
-  async function handleSwitch(newKey: SessionWorkoutKey) {
-    if (hasProgress) {
-      await finishSession.mutateAsync({ sessionId, duration_sec: activeSec })
-    }
-    const res = await startSession.mutateAsync(newKey)
-    setConfirmSwitchTo(null)
-    onSwitched(res.id)
   }
 
   const lastSetByExercise = useMemo(() => {
@@ -294,16 +265,6 @@ function ActiveSession({
           </button>
           <button
             type="button"
-            onClick={() => setPickingWorkout(true)}
-            aria-label="Change workout"
-            className="tap-target flex items-center justify-center rounded-full border border-border text-ink-secondary hover:bg-surface-alt"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M17 3l4 4-4 4M21 7H9M7 21l-4-4 4-4M3 17h12" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-          <button
-            type="button"
             onClick={() => setConfirmReset(true)}
             aria-label="Reset workout"
             className="tap-target flex items-center justify-center rounded-full border border-border text-ink-secondary hover:bg-surface-alt"
@@ -314,42 +275,6 @@ function ActiveSession({
           </button>
         </div>
       </header>
-
-      {pickingWorkout && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setPickingWorkout(false)}>
-          <div
-            className="w-full max-w-xs rounded-[var(--radius-card)] border border-border bg-surface p-5"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <p className="mb-3 text-[15px] font-semibold text-ink">Switch workout</p>
-            <div className="grid grid-cols-2 gap-2">
-              {SESSION_WORKOUT_KEYS.filter((key) => key !== workoutKey).map((key) => (
-                <button
-                  key={key}
-                  onClick={() => {
-                    setPickingWorkout(false)
-                    setConfirmSwitchTo(key)
-                  }}
-                  className="tap-target rounded-[var(--radius-control)] border border-border px-3 py-2 text-[13px] font-medium text-ink-secondary hover:bg-surface-alt"
-                >
-                  {WORKOUT_LABELS[key]}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {confirmSwitchTo && (
-        <ConfirmDialog
-          title={`Switch to ${WORKOUT_LABELS[confirmSwitchTo]}?`}
-          message={hasProgress ? `${WORKOUT_LABELS[workoutKey]}'s progress so far will be saved.` : undefined}
-          confirmLabel="Switch"
-          onConfirm={() => handleSwitch(confirmSwitchTo)}
-          onCancel={() => setConfirmSwitchTo(null)}
-          pending={finishSession.isPending || startSession.isPending}
-        />
-      )}
 
       {confirmReset && (
         <ConfirmDialog
