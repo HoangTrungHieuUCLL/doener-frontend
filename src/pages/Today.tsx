@@ -10,7 +10,6 @@ import {
   useStartSession,
 } from '../api/hooks/useSessions'
 import type { Exercise, SessionSetDetail, SessionWorkoutKey } from '../api/types'
-import { ExerciseMotionGuide } from '../components/ExerciseMotionGuide'
 import { RestTimer } from '../components/RestTimer'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
@@ -19,9 +18,6 @@ import { Card } from '../components/ui/Card'
 import { todayISO } from '../lib/date'
 import { formatDuration, useStopwatch } from '../lib/useStopwatch'
 import { useLocalStorageState } from '../lib/useLocalStorageState'
-import { getMotionGuide } from '../motion/motionGuides'
-
-const ACCENT = '#6e7c91'
 
 const WORKOUT_LABELS: Record<SessionWorkoutKey, string> = {
   A: 'Workout A',
@@ -279,7 +275,6 @@ function ExerciseLogCard({
   onLogged: (isNewPr: boolean) => void
 }) {
   const logSet = useLogSet()
-  const guide = getMotionGuide(exercise.key)
   const [weight, setWeight] = useState('')
   const [reps, setReps] = useState('')
   const [durationSec, setDurationSec] = useState('')
@@ -314,24 +309,6 @@ function ExerciseLogCard({
         </div>
         {isNewPr && <Badge tone="positive">New PR!</Badge>}
       </div>
-
-      {guide && (
-        <div className="overflow-hidden rounded-[var(--radius-control)] bg-surface-alt">
-          <ExerciseMotionGuide
-            poseA={guide.poseA}
-            poseB={guide.poseB}
-            equipment={guide.equipment}
-            accent={ACCENT}
-            frameShapes={guide.frameShapes}
-            machine={guide.machine}
-            handheld={guide.handheld}
-            farLimb={guide.farLimb}
-            floor={guide.floor}
-            label={exercise.name}
-            className="h-32 w-full"
-          />
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2">
         {exercise.type === 'time' ? (
