@@ -1,9 +1,37 @@
 import { useMemo, useState } from 'react'
 import { useExercises } from '../api/hooks/useExercises'
 import type { Exercise } from '../api/types'
+import { Card } from '../components/ui/Card'
 import { ExerciseCard } from '../components/ui/ExerciseCard'
 import { EXERCISE_GUIDES } from '../lib/exerciseGuides'
 import { targetLabel, WORKOUT_LABELS } from '../lib/workouts'
+
+const PRINCIPLES: { title: string; body: string }[] = [
+  {
+    title: 'Focus',
+    body: 'Leave your phone alone and consciously focus on the muscle doing the work each set — that mind-muscle connection makes the training stimulus more intense.',
+  },
+  {
+    title: 'Tempo',
+    body: 'The two numbers (e.g. "3/1") are time under tension: the first is seconds lowering the weight, the second is seconds lifting it against resistance. Time under tension is what drives the effect, so keep to it.',
+  },
+  {
+    title: 'Rest',
+    body: 'Stick to the listed rest time. Too short and you\'ll have less strength for the next set than planned; too long changes what the workout is training. Time it.',
+  },
+  {
+    title: 'Progression',
+    body: 'Quality over quantity — the last rep of a set should still be clean technique. Once every set is easy with good form, add weight next time. For bodyweight moves, progress via better execution, mind-muscle connection, or 1-2 extra reps.',
+  },
+  {
+    title: 'Cardio',
+    body: 'Fit in one cardio session a week, 30-45 minutes, at a heart rate of about 120-130 bpm — or a pace where you can still hold a conversation. Run, bike, row, or ski erg, your choice.',
+  },
+  {
+    title: 'Schedule',
+    body: 'Aim for 3 workouts a week (A, B, C), ideally with a rest day after each. The exact weekdays don\'t matter — hitting 3 sessions a week does.',
+  },
+]
 
 const SECTIONS: { key: string; label: string }[] = [
   { key: 'warmup', label: 'Warm-up' },
@@ -31,6 +59,18 @@ export function Workout() {
         <h1 className="font-serif text-[24px] font-semibold text-ink">Workout</h1>
         <p className="text-[14px] text-ink-secondary">Every exercise, how to do it, and what to watch for.</p>
       </header>
+
+      <Card className="flex flex-col gap-3">
+        <p className="text-[13px] font-semibold uppercase tracking-wide text-ink-tertiary">How this plan works</p>
+        <dl className="flex flex-col gap-2.5">
+          {PRINCIPLES.map(({ title, body }) => (
+            <div key={title}>
+              <dt className="text-[14px] font-semibold text-ink">{title}</dt>
+              <dd className="text-[13px] text-ink-secondary">{body}</dd>
+            </div>
+          ))}
+        </dl>
+      </Card>
 
       {isLoading ? (
         <p className="text-center text-ink-tertiary">Loading…</p>
