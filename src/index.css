@@ -1,7 +1,10 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* Headings only -- a warm editorial serif (in the spirit of Claude's
+     Tiempos, which is a licensed Anthropic font we can't bundle here). */
+  --font-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
 
   /* Warm charcoal base -- not pure black (avoids the flat cold-neon-on-black
      look) and softened white ink (avoids glow against a dark ground).

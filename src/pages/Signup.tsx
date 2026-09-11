@@ -33,7 +33,7 @@ export function Signup() {
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-2">
           <LogoMark className="h-10 w-10 text-accent" />
-          <h1 className="text-[22px] font-semibold text-ink">Doener</h1>
+          <h1 className="font-serif text-[22px] font-semibold text-ink">Doener</h1>
           <p className="text-[14px] text-ink-secondary">Create your account.</p>
         </div>
 

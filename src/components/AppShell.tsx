@@ -26,7 +26,7 @@ export function AppShell() {
       <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-surface px-4 py-6 md:flex">
         <div className="mb-8 flex items-center gap-2 px-2 text-ink">
           <LogoMark className="h-7 w-7 text-accent" />
-          <span className="text-[17px] font-semibold">Doener</span>
+          <span className="font-serif text-[17px] font-semibold">Doener</span>
         </div>
         <nav className="flex flex-1 flex-col gap-1">
           {NAV_ITEMS.map(({ to, label, Icon }) => (
@@ -62,7 +62,7 @@ export function AppShell() {
         <header className="flex items-center justify-between border-b border-border bg-surface px-4 py-3 md:hidden">
           <div className="flex items-center gap-2 text-ink">
             <LogoMark className="h-6 w-6 text-accent" />
-            <span className="text-[17px] font-semibold">Doener</span>
+            <span className="font-serif text-[17px] font-semibold">Doener</span>
           </div>
           <button
             onClick={logout}

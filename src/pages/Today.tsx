@@ -59,7 +59,7 @@ export function Today() {
     return (
       <div className="flex flex-col items-center gap-8 pt-8 text-center">
         <header>
-          <h1 className="text-[24px] font-semibold text-ink">Today</h1>
+          <h1 className="font-serif text-[24px] font-semibold text-ink">Today</h1>
           {!plannedKey && (
             <p className="text-[14px] text-ink-secondary">
               Nothing planned for today — head to Plan to assign a workout.
@@ -147,7 +147,7 @@ function FinishedSummary({
         </svg>
       </div>
       <div>
-        <h1 className="text-[22px] font-semibold text-ink">Workout complete</h1>
+        <h1 className="font-serif text-[22px] font-semibold text-ink">Workout complete</h1>
         <p className="text-[14px] text-ink-secondary">{WORKOUT_LABELS[session.workout_key]} is in the books.</p>
       </div>
       {session.total_volume_kg !== null && (
@@ -239,7 +239,7 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
     <div className="flex flex-col gap-6 pb-6">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-[24px] font-semibold text-ink">{WORKOUT_LABELS[workoutKey]}</h1>
+          <h1 className="font-serif text-[24px] font-semibold text-ink">{WORKOUT_LABELS[workoutKey]}</h1>
           <p className="text-[14px] text-ink-secondary">{isPaused ? 'Paused' : 'In progress'}</p>
         </div>
         <div className="flex items-center gap-3">
