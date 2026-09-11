@@ -16,11 +16,12 @@ import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Card } from '../components/ui/Card'
+import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { ExerciseCard } from '../components/ui/ExerciseCard'
 import { todayISO } from '../lib/date'
 import { formatDuration, usePausableStopwatch } from '../lib/useStopwatch'
 import { useLocalStorageState } from '../lib/useLocalStorageState'
-import { WORKOUT_LABELS } from '../lib/workouts'
+import { WORKOUT_LABELS, targetLabel } from '../lib/workouts'
 
 const SESSION_WORKOUT_KEYS: SessionWorkoutKey[] = ['A', 'B', 'C', 'cardio']
 
@@ -42,10 +43,19 @@ export function Today() {
   const planWorkoutKey = planEntries?.find((p) => p.date === today)?.workout_key ?? null
   const plannedKey = isSessionWorkoutKey(planWorkoutKey) ? planWorkoutKey : null
   const [pickedKey, setPickedKey] = useState<SessionWorkoutKey>(plannedKey ?? 'A')
+  const [confirmOverride, setConfirmOverride] = useState(false)
 
-  async function handleStart() {
-    const res = await startSession.mutateAsync(plannedKey ?? pickedKey)
+  async function beginSession(key: SessionWorkoutKey) {
+    const res = await startSession.mutateAsync(key)
     setActiveSessionId(res.id)
+  }
+
+  function handleStartClick() {
+    if (plannedKey && pickedKey !== plannedKey) {
+      setConfirmOverride(true)
+      return
+    }
+    beginSession(pickedKey)
   }
 
   function handleEndSession() {
@@ -70,29 +80,39 @@ export function Today() {
           </p>
         </header>
 
-        {!plannedKey && (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {SESSION_WORKOUT_KEYS.map((key) => (
-              <button
-                key={key}
-                onClick={() => setPickedKey(key)}
-                className={`tap-target rounded-[var(--radius-card)] border px-3 py-4 text-[15px] font-medium transition-colors ${
-                  pickedKey === key
-                    ? 'border-accent bg-accent-soft text-accent-strong'
-                    : 'border-border bg-surface text-ink-secondary'
-                }`}
-              >
-                {WORKOUT_LABELS[key]}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {SESSION_WORKOUT_KEYS.map((key) => (
+            <button
+              key={key}
+              onClick={() => setPickedKey(key)}
+              className={`tap-target rounded-[var(--radius-card)] border px-3 py-4 text-[15px] font-medium transition-colors ${
+                pickedKey === key
+                  ? 'border-accent bg-accent-soft text-accent-strong'
+                  : 'border-border bg-surface text-ink-secondary'
+              }`}
+            >
+              {WORKOUT_LABELS[key]}
+            </button>
+          ))}
+        </div>
 
-        <Button size="lg" onClick={handleStart} disabled={startSession.isPending}>
-          {startSession.isPending
-            ? 'Starting…'
-            : `Start ${WORKOUT_LABELS[plannedKey ?? pickedKey]}`}
+        <Button size="lg" onClick={handleStartClick} disabled={startSession.isPending}>
+          {startSession.isPending ? 'Starting…' : `Start ${WORKOUT_LABELS[pickedKey]}`}
         </Button>
+
+        {confirmOverride && (
+          <ConfirmDialog
+            title={`Log ${WORKOUT_LABELS[pickedKey]} instead?`}
+            message={`Your plan says ${WORKOUT_LABELS[plannedKey!]} today.`}
+            confirmLabel="Log it"
+            cancelLabel="Cancel"
+            onConfirm={() => {
+              setConfirmOverride(false)
+              beginSession(pickedKey)
+            }}
+            onCancel={() => setConfirmOverride(false)}
+          />
+        )}
       </div>
     )
   }
@@ -107,7 +127,10 @@ export function Today() {
       workoutKey={session.workout_key}
       startedAt={session.started_at}
       loggedSets={session.sets}
+      hasCardio={session.cardio !== null}
       exercises={exercises ?? []}
+      onReset={handleEndSession}
+      onSwitched={(newSessionId) => setActiveSessionId(newSessionId)}
     />
   )
 }
@@ -146,16 +169,51 @@ interface ActiveSessionProps {
   workoutKey: SessionWorkoutKey
   startedAt: string
   loggedSets: SessionSetDetail[]
+  hasCardio: boolean
   exercises: Exercise[]
+  /** Session was reset (finished as-is); parent should forget this session id. */
+  onReset: () => void
+  /** Session was switched to a different workout; parent should adopt the new session id. */
+  onSwitched: (newSessionId: number) => void
 }
 
-function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises }: ActiveSessionProps) {
+function ActiveSession({
+  sessionId,
+  workoutKey,
+  startedAt,
+  loggedSets,
+  hasCardio,
+  exercises,
+  onReset,
+  onSwitched,
+}: ActiveSessionProps) {
   const { displaySec, activeSec, isPaused, toggle: togglePause } = usePausableStopwatch(startedAt)
   const finishSession = useFinishSession()
+  const startSession = useStartSession()
   const { data: lastSets } = useLastSets()
   const [restTimer, setRestTimer] = useState<{ key: number; durationSec: number } | null>(null)
   const [newPrIds, setNewPrIds] = useState<Record<number, boolean>>({})
   const [viewMode, setViewMode] = useLocalStorageState<'focus' | 'list'>('doener.todayView', 'focus')
+  const [confirmReset, setConfirmReset] = useState(false)
+  const [pickingWorkout, setPickingWorkout] = useState(false)
+  const [confirmSwitchTo, setConfirmSwitchTo] = useState<SessionWorkoutKey | null>(null)
+
+  const hasProgress = loggedSets.length > 0 || hasCardio
+
+  async function handleReset() {
+    await finishSession.mutateAsync({ sessionId, duration_sec: activeSec })
+    setConfirmReset(false)
+    onReset()
+  }
+
+  async function handleSwitch(newKey: SessionWorkoutKey) {
+    if (hasProgress) {
+      await finishSession.mutateAsync({ sessionId, duration_sec: activeSec })
+    }
+    const res = await startSession.mutateAsync(newKey)
+    setConfirmSwitchTo(null)
+    onSwitched(res.id)
+  }
 
   const lastSetByExercise = useMemo(() => {
     const map: Record<number, LastSet> = {}
@@ -234,8 +292,75 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
               </svg>
             )}
           </button>
+          <button
+            type="button"
+            onClick={() => setPickingWorkout(true)}
+            aria-label="Change workout"
+            className="tap-target flex items-center justify-center rounded-full border border-border text-ink-secondary hover:bg-surface-alt"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M17 3l4 4-4 4M21 7H9M7 21l-4-4 4-4M3 17h12" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfirmReset(true)}
+            aria-label="Reset workout"
+            className="tap-target flex items-center justify-center rounded-full border border-border text-ink-secondary hover:bg-surface-alt"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 12a9 9 0 1 1 3 6.7M3 12v5h5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
         </div>
       </header>
+
+      {pickingWorkout && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setPickingWorkout(false)}>
+          <div
+            className="w-full max-w-xs rounded-[var(--radius-card)] border border-border bg-surface p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="mb-3 text-[15px] font-semibold text-ink">Switch workout</p>
+            <div className="grid grid-cols-2 gap-2">
+              {SESSION_WORKOUT_KEYS.filter((key) => key !== workoutKey).map((key) => (
+                <button
+                  key={key}
+                  onClick={() => {
+                    setPickingWorkout(false)
+                    setConfirmSwitchTo(key)
+                  }}
+                  className="tap-target rounded-[var(--radius-control)] border border-border px-3 py-2 text-[13px] font-medium text-ink-secondary hover:bg-surface-alt"
+                >
+                  {WORKOUT_LABELS[key]}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmSwitchTo && (
+        <ConfirmDialog
+          title={`Switch to ${WORKOUT_LABELS[confirmSwitchTo]}?`}
+          message={hasProgress ? `${WORKOUT_LABELS[workoutKey]}'s progress so far will be saved.` : undefined}
+          confirmLabel="Switch"
+          onConfirm={() => handleSwitch(confirmSwitchTo)}
+          onCancel={() => setConfirmSwitchTo(null)}
+          pending={finishSession.isPending || startSession.isPending}
+        />
+      )}
+
+      {confirmReset && (
+        <ConfirmDialog
+          title="Reset this workout?"
+          message="Your progress so far will be saved to history, and you can start fresh."
+          confirmLabel="Reset"
+          onConfirm={handleReset}
+          onCancel={() => setConfirmReset(false)}
+          pending={finishSession.isPending}
+        />
+      )}
 
       {workoutKey !== 'cardio' && (
         <div className="flex gap-1 rounded-[var(--radius-control)] bg-surface-alt p-1">
@@ -345,13 +470,6 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
       <div className="flex flex-col gap-3">{children}</div>
     </section>
   )
-}
-
-function targetLabel(exercise: Exercise): string {
-  if (exercise.type === 'time') {
-    return `target ${exercise.sets}×${exercise.duration_sec ?? '?'}s`
-  }
-  return `target ${exercise.sets}×${exercise.reps ?? '?'}`
 }
 
 function Stepper({

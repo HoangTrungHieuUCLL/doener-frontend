@@ -1,11 +1,15 @@
 import { useMemo, useState } from 'react'
+import { useExercises } from '../api/hooks/useExercises'
 import { usePlan, useSetPlan } from '../api/hooks/usePlan'
 import type { WorkoutKey } from '../api/types'
 import { Card } from '../components/ui/Card'
 import { Calendar } from '../components/ui/Calendar'
 import { Button } from '../components/ui/Button'
+import { ExerciseCard } from '../components/ui/ExerciseCard'
 import { monthDates, nextWeekdayOccurrences, todayISO, WEEKDAY_NAMES } from '../lib/date'
-import { WORKOUT_DOT, WORKOUT_LABELS, WORKOUT_OPTIONS } from '../lib/workouts'
+import { WORKOUT_DOT, WORKOUT_LABELS, WORKOUT_OPTIONS, targetLabel } from '../lib/workouts'
+
+const PREVIEWABLE_KEYS: WorkoutKey[] = ['A', 'B', 'C']
 
 const REPEAT_WEEKS = 8
 
@@ -24,6 +28,7 @@ export function Plan() {
   const to = dates[dates.length - 1]
   const { data: planEntries, isLoading } = usePlan(from, to)
   const setPlan = useSetPlan()
+  const { data: exercises } = useExercises()
 
   const planByDate = useMemo(() => {
     const map: Record<string, WorkoutKey> = {}
@@ -51,6 +56,15 @@ export function Plan() {
     await Promise.all(dates.map((date) => setPlan.mutateAsync({ date, workout_key: repeatPrompt.key })))
     setRepeatPrompt(null)
   }
+
+  const previewKey = selectedDays.length === 1 ? planByDate[selectedDays[0]] : null
+  const previewExercises = useMemo(
+    () =>
+      previewKey && PREVIEWABLE_KEYS.includes(previewKey)
+        ? (exercises ?? []).filter((e) => e.category === previewKey).sort((a, b) => a.id - b.id)
+        : [],
+    [previewKey, exercises],
+  )
 
   return (
     <div className="flex flex-col gap-6">
@@ -103,6 +117,25 @@ export function Plan() {
               ))}
             </div>
           </Card>
+
+          {previewExercises.length > 0 && (
+            <section className="flex flex-col gap-2">
+              <h2 className="text-[13px] font-semibold uppercase tracking-wide text-ink-tertiary">
+                {WORKOUT_LABELS[previewKey!]} exercises
+              </h2>
+              <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1">
+                {previewExercises.map((ex) => (
+                  <ExerciseCard
+                    key={ex.id}
+                    exerciseKey={ex.key}
+                    title={ex.name}
+                    subtitle={targetLabel(ex)}
+                    className="h-32 w-40 shrink-0 snap-start"
+                  />
+                ))}
+              </div>
+            </section>
+          )}
 
           {repeatPrompt && (
             <Card className="flex items-center justify-between gap-3">

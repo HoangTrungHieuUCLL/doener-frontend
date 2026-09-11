@@ -1,11 +1,9 @@
-import type { WorkoutKey } from '../api/types'
+import type { Exercise, WorkoutKey } from '../api/types'
 
-// Each of A/B/C is a mixed full-body session (legs + push + pull + core);
-// named after its primary compound lift rather than an abstract letter.
 export const WORKOUT_LABELS: Record<WorkoutKey, string> = {
-  A: 'Squat Day',
-  B: 'Lunge Day',
-  C: 'Hip Thrust Day',
+  A: 'Workout A',
+  B: 'Workout B',
+  C: 'Workout C',
   cardio: 'Cardio',
   rest: 'Rest',
   custom: 'Custom',
@@ -23,3 +21,10 @@ export const WORKOUT_DOT: Record<WorkoutKey, string> = {
 // Only these are offered from pickers; "rest"/"custom" exist in the
 // backend's WorkoutKey but aren't part of this app's assignable options.
 export const WORKOUT_OPTIONS: WorkoutKey[] = ['A', 'B', 'C', 'cardio']
+
+export function targetLabel(exercise: Exercise): string {
+  if (exercise.type === 'time') {
+    return `target ${exercise.sets}×${exercise.duration_sec ?? '?'}s`
+  }
+  return `target ${exercise.sets}×${exercise.reps ?? '?'}`
+}
