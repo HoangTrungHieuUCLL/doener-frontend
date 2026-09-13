@@ -21,6 +21,14 @@ const CATEGORY_IMAGE: Record<string, string> = {
   hip_thrust: unsplashUrl('photo-1588271956031-bd2698e27dd6'),
   leg_press: unsplashUrl('photo-1434682772747-f16d3ea162c3'),
   lat_pulldown: unsplashUrl('photo-1507398941214-572c25f4b1dc'),
+  running: unsplashUrl('photo-1764347753770-08c46fd4fa0d'),
+  walking: unsplashUrl('photo-1761072087053-2bff48d50499'),
+  cycling: unsplashUrl('photo-1783458604866-371e445d7f5e'),
+  jump_rope: unsplashUrl('photo-1514994667787-b48ca37155f0'),
+  rowing_machine: unsplashUrl('photo-1780398585038-d77d3817c3c6'),
+  sit_up: unsplashUrl('photo-1571019613454-1cb2f99b2d8b'),
+  burpee: unsplashUrl('photo-1631361927604-424b038b558c'),
+  pull_up: unsplashUrl('photo-1734980339741-6255c609961a'),
 }
 
 const EXERCISE_CATEGORY: Record<string, keyof typeof CATEGORY_IMAGE> = {
@@ -49,6 +57,15 @@ const EXERCISE_CATEGORY: Record<string, keyof typeof CATEGORY_IMAGE> = {
   c_lat_pulldown: 'lat_pulldown',
   c_machine_fly: 'lateral_raise',
   c_cable_lateral_raise: 'lateral_raise',
+
+  custom_running: 'running',
+  custom_walking: 'walking',
+  custom_cycling: 'cycling',
+  custom_jump_rope: 'jump_rope',
+  custom_rowing_machine: 'rowing_machine',
+  custom_sit_up: 'sit_up',
+  custom_burpee: 'burpee',
+  custom_pull_up: 'pull_up',
 }
 
 export function exerciseImageUrl(exerciseKey: string, width = 480): string {

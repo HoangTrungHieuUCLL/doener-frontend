@@ -12,6 +12,9 @@ import { WORKOUT_DOT, WORKOUT_LABELS, WORKOUT_OPTIONS, targetLabel } from '../li
 const PREVIEWABLE_KEYS: WorkoutKey[] = ['A', 'B', 'C']
 const REPEAT_WEEKS = 8
 
+// Clearer than the generic "Custom" label everywhere else, just for this picker.
+const PICKER_LABEL: Partial<Record<WorkoutKey, string>> = { custom: 'Choose my own' }
+
 function weekdayName(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number)
   return WEEKDAY_NAMES[new Date(y, m - 1, d).getDay()]
@@ -160,7 +163,7 @@ export function Plan() {
                   }`}
                 >
                   <span className={`dot ${WORKOUT_DOT[key]}`} />
-                  {WORKOUT_LABELS[key]}
+                  {PICKER_LABEL[key] ?? WORKOUT_LABELS[key]}
                 </button>
               ))}
             </div>

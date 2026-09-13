@@ -6,7 +6,7 @@
 /** Every value the backend can store on a planned day. */
 export type WorkoutKey = 'A' | 'B' | 'C' | 'cardio' | 'rest' | 'custom'
 /** The subset that can actually be used to start a session. */
-export type SessionWorkoutKey = 'A' | 'B' | 'C' | 'cardio'
+export type SessionWorkoutKey = 'A' | 'B' | 'C' | 'cardio' | 'custom'
 
 export interface User {
   id: number

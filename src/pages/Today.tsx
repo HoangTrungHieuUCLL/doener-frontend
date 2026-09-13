@@ -23,8 +23,18 @@ import { useLocalStorageState } from '../lib/useLocalStorageState'
 import { WORKOUT_LABELS, targetLabel } from '../lib/workouts'
 
 function isSessionWorkoutKey(key: string | undefined | null): key is SessionWorkoutKey {
-  return key === 'A' || key === 'B' || key === 'C' || key === 'cardio'
+  return key === 'A' || key === 'B' || key === 'C' || key === 'cardio' || key === 'custom'
 }
+
+// Picker groups for "Choose my own exercises" -- every category in the
+// catalog, in a sensible browsing order.
+const PICKER_SECTIONS: { key: string; label: string }[] = [
+  { key: 'warmup', label: 'Warm-up' },
+  { key: 'A', label: WORKOUT_LABELS.A },
+  { key: 'B', label: WORKOUT_LABELS.B },
+  { key: 'C', label: WORKOUT_LABELS.C },
+  { key: 'custom', label: 'Standalone' },
+]
 
 export function Today() {
   const today = todayISO()
@@ -290,7 +300,7 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
         />
       )}
 
-      {workoutKey !== 'cardio' && (
+      {workoutKey !== 'cardio' && workoutKey !== 'custom' && (
         <div className="flex gap-1 rounded-full border-2 border-ink bg-surface p-1">
           {(['focus', 'list'] as const).map((mode) => (
             <button
@@ -319,6 +329,15 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
         <Section title="Cardio">
           <CardioForm sessionId={sessionId} />
         </Section>
+      ) : workoutKey === 'custom' ? (
+        <CustomExercisePicker
+          exercises={exercises}
+          sessionId={sessionId}
+          loggedSets={loggedSets}
+          lastSetByExercise={lastSetByExercise}
+          newPrIds={newPrIds}
+          onLogged={(exerciseId, restSec, isNewPr) => handleSetLogged(exerciseId, restSec, false, isNewPr)}
+        />
       ) : viewMode === 'list' ? (
         <>
           {warmupExercises.length > 0 && (
@@ -531,6 +550,78 @@ function ExerciseLogCard({
           Log set
         </Button>
       </div>
+    </div>
+  )
+}
+
+/** "Choose my own exercises" flow: pick any exercise from the full catalog,
+ * log as many sets as you like, then go back and pick another (or the same
+ * one again) -- repeat freely until you hit Finish workout. */
+function CustomExercisePicker({
+  exercises,
+  sessionId,
+  loggedSets,
+  lastSetByExercise,
+  newPrIds,
+  onLogged,
+}: {
+  exercises: Exercise[]
+  sessionId: number
+  loggedSets: SessionSetDetail[]
+  lastSetByExercise: Record<number, LastSet>
+  newPrIds: Record<number, boolean>
+  onLogged: (exerciseId: number, restSec: number, isNewPr: boolean) => void
+}) {
+  const [pickedId, setPickedId] = useState<number | null>(null)
+  const picked = exercises.find((e) => e.id === pickedId) ?? null
+
+  if (picked) {
+    return (
+      <div className="flex flex-col gap-3">
+        <button
+          type="button"
+          onClick={() => setPickedId(null)}
+          className="press self-start rounded-full border-2 border-ink bg-surface px-3 py-1.5 font-display text-[12px] font-extrabold uppercase tracking-[0.03em] text-ink shadow-[var(--shadow-pop)]"
+        >
+          ‹ Choose another exercise
+        </button>
+        <ExerciseLogCard
+          exercise={picked}
+          sessionId={sessionId}
+          loggedSets={loggedSets.filter((s) => s.exercise_id === picked.id)}
+          lastSet={lastSetByExercise[picked.id] ?? null}
+          isNewPr={Boolean(newPrIds[picked.id])}
+          onLogged={(isNewPr) => onLogged(picked.id, picked.rest_sec, isNewPr)}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      {PICKER_SECTIONS.map(({ key, label }) => {
+        const items = exercises.filter((e) => e.category === key).sort((a, b) => a.id - b.id)
+        if (items.length === 0) return null
+        return (
+          <Section key={key} title={label}>
+            <div className="grid grid-cols-2 gap-3">
+              {items.map((ex) => {
+                const setCount = loggedSets.filter((s) => s.exercise_id === ex.id).length
+                return (
+                  <button key={ex.id} type="button" onClick={() => setPickedId(ex.id)} className="press text-left">
+                    <ExerciseCard
+                      exerciseKey={ex.key}
+                      title={ex.name}
+                      subtitle={setCount > 0 ? `${setCount} set${setCount === 1 ? '' : 's'} logged` : targetLabel(ex)}
+                      className="h-28"
+                    />
+                  </button>
+                )
+              })}
+            </div>
+          </Section>
+        )
+      })}
     </div>
   )
 }

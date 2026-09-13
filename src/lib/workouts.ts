@@ -18,9 +18,9 @@ export const WORKOUT_DOT: Record<WorkoutKey, string> = {
   custom: 'bg-ink-tertiary',
 }
 
-// Only these are offered from pickers; "rest"/"custom" exist in the
-// backend's WorkoutKey but aren't part of this app's assignable options.
-export const WORKOUT_OPTIONS: WorkoutKey[] = ['A', 'B', 'C', 'cardio']
+// Only these are offered from pickers; "rest" exists in the backend's
+// WorkoutKey but isn't part of this app's assignable options.
+export const WORKOUT_OPTIONS: WorkoutKey[] = ['A', 'B', 'C', 'cardio', 'custom']
 
 export function targetLabel(exercise: Exercise): string {
   if (exercise.type === 'time') {
