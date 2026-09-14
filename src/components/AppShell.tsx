@@ -95,12 +95,19 @@ export function AppShell() {
             content (a bare, childless Glass collapses to zero size --
             it has nothing to fit itself to). The NavLink anchors inside
             are untouched and stay clickable, unlike liquidGL, which sets
-            pointer-events: none on the element it's applied to. */}
+            pointer-events: none on the element it's applied to.
+
+            The whole pill (not just its inner padding) is offset by
+            env(safe-area-inset-bottom): installed as a home-screen app on
+            iOS, the viewport runs edge-to-edge under the home indicator, so
+            a plain bottom-2 would float the pill (rounded corners included)
+            right into that exclusion zone. Requires viewport-fit=cover in
+            index.html's viewport meta, or safe-area-inset-* is always 0. */}
         <Glass
-          className="fixed inset-x-2 bottom-2 z-20 rounded-[var(--radius-card)] md:hidden"
+          className="fixed inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-20 rounded-[var(--radius-card)] md:hidden"
           style={{ background: 'var(--color-glass)' }}
         >
-          <nav className="flex gap-1 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          <nav className="flex gap-1 px-2 py-2">
             {NAV_ITEMS.map(({ to, label, Icon }) => (
               <NavLink
                 key={to}
