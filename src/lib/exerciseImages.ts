@@ -12,6 +12,10 @@ const EXERCISE_MEDIA: Partial<Record<string, string>> = {
   warmup_jumping_jacks: '/exercises/jumping-jacks.gif',
   a_lying_leg_curl: '/exercises/lying-leg-curl.gif',
   a_goblet_squat: '/exercises/goblet-squat.gif',
+  a_machine_row: '/exercises/machine-row.gif',
+  a_push_up: '/exercises/push-up.gif',
+  a_forearm_plank: '/exercises/forearm-plank.gif',
+  b_back_extension: '/exercises/back-extension.gif',
   custom_running: '/exercises/running.gif',
 }
 
