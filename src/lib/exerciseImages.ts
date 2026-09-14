@@ -1,3 +1,20 @@
+// Real per-exercise photos/GIFs, served from public/exercises/. Takes
+// priority over the Unsplash category fallback below. Add more as they're
+// filmed -- an exercise with no entry here just keeps using its category
+// stock photo.
+const EXERCISE_MEDIA: Partial<Record<string, string>> = {
+  warmup_bar_hang: '/exercises/bar-hang.png',
+  warmup_deep_squat_hold: '/exercises/deep-squat-hold.gif',
+  warmup_horizontal_arm_swings: '/exercises/horizontal-arm-swings.gif',
+  warmup_torso_rotation_swings: '/exercises/torso-rotation-swings.gif',
+  warmup_swimmers: '/exercises/swimmer.gif',
+  warmup_hip_raises: '/exercises/hip-raises.gif',
+  warmup_jumping_jacks: '/exercises/jumping-jacks.gif',
+  a_lying_leg_curl: '/exercises/lying-leg-curl.gif',
+  a_goblet_squat: '/exercises/goblet-squat.gif',
+  custom_running: '/exercises/running.gif',
+}
+
 // Per-exercise images sourced from Unsplash, grouped by movement pattern
 // (many exercises share a category image rather than each having a unique
 // lookup). Hotlinked with size/quality params so we never ship full-res
@@ -69,6 +86,9 @@ const EXERCISE_CATEGORY: Record<string, keyof typeof CATEGORY_IMAGE> = {
 }
 
 export function exerciseImageUrl(exerciseKey: string, width = 480): string {
+  const media = EXERCISE_MEDIA[exerciseKey]
+  if (media) return media
+
   const category = EXERCISE_CATEGORY[exerciseKey]
   const base = category ? CATEGORY_IMAGE[category] : CATEGORY_IMAGE.mobility_warmup
   return width === 480 ? base : base.replace(/w=\d+/, `w=${width}`)
