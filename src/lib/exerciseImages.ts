@@ -16,6 +16,8 @@ const EXERCISE_MEDIA: Partial<Record<string, string>> = {
   a_push_up: '/exercises/push-up.gif',
   a_forearm_plank: '/exercises/forearm-plank.gif',
   b_back_extension: '/exercises/back-extension.gif',
+  b_reverse_lunge: '/exercises/reverse-lunges.gif',
+  b_reverse_fly: '/exercises/reverse-fly.gif',
   custom_running: '/exercises/running.gif',
 }
 
