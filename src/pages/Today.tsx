@@ -526,7 +526,7 @@ function ExerciseLogCard({
         title={exercise.name}
         subtitle={`${setCount} set${setCount === 1 ? '' : 's'} logged · ${targetLabel(exercise)}${exercise.per_side ? ' per side' : ''}`}
         chip={isNewPr ? 'New PR!' : targetLabel(exercise)}
-        className="h-32 border-b-2 border-ink"
+        className="h-[40vh] border-b-2 border-ink"
       />
 
       <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-4 p-4">
@@ -613,7 +613,7 @@ function CustomExercisePicker({
                       exerciseKey={ex.key}
                       title={ex.name}
                       subtitle={setCount > 0 ? `${setCount} set${setCount === 1 ? '' : 's'} logged` : targetLabel(ex)}
-                      className="h-28"
+                      className="aspect-square"
                     />
                   </button>
                 )

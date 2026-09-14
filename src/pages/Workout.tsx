@@ -74,57 +74,53 @@ export function Workout() {
       {isLoading ? (
         <p className="text-center text-ink-tertiary">Loading…</p>
       ) : (
-        SECTIONS.map(({ key, label }) => (
-          <section key={key} className="flex flex-col gap-3">
-            <h2 className="eyebrow text-[18px]">{label}</h2>
-            <div className="flex flex-col gap-3">
-              {(byCategory[key] ?? []).map((ex) => {
-                const expanded = expandedId === ex.id
-                const guide = EXERCISE_GUIDES[ex.key]
-                return (
-                  <div
-                    key={ex.id}
-                    className="sticker flex flex-col overflow-hidden rounded-[var(--radius-card)] bg-surface"
-                  >
+        SECTIONS.map(({ key, label }) => {
+          const items = byCategory[key] ?? []
+          const expandedEx = items.find((ex) => ex.id === expandedId)
+          const guide = expandedEx && EXERCISE_GUIDES[expandedEx.key]
+          return (
+            <section key={key} className="flex flex-col gap-3">
+              <h2 className="eyebrow text-[18px]">{label}</h2>
+              <div className="grid grid-cols-2 gap-3">
+                {items.map((ex) => {
+                  const expanded = expandedId === ex.id
+                  return (
                     <button
+                      key={ex.id}
                       type="button"
                       onClick={() => setExpandedId(expanded ? null : ex.id)}
-                      className="text-left"
+                      className="press text-left"
                     >
                       <ExerciseCard
-                        framed={false}
                         exerciseKey={ex.key}
                         title={ex.name}
                         subtitle={`${targetLabel(ex)}${ex.per_side ? ' per side' : ''}`}
-                        className={`h-28 ${expanded ? 'border-b-2 border-ink' : ''}`}
+                        className={`aspect-square ${expanded ? 'outline outline-2 outline-offset-2 outline-accent' : ''}`}
                       />
                     </button>
-                    {expanded && guide && (
-                      <div className="animate-page-in flex flex-col gap-3 p-4">
-                        <div>
-                          <p className="eyebrow mb-1.5 text-[12px]">
-                            How to
-                          </p>
-                          <ol className="list-decimal space-y-1 pl-4 text-[14px] text-ink">
-                            {guide.howTo.map((step, i) => (
-                              <li key={i}>{step}</li>
-                            ))}
-                          </ol>
-                        </div>
-                        <div className="rounded-[var(--radius-control)] border-2 border-ink bg-negative-soft p-3">
-                          <p className="eyebrow mb-0.5 text-[12px] text-negative-text">
-                            Watch out for
-                          </p>
-                          <p className="text-[13px] text-ink">{guide.caution}</p>
-                        </div>
-                      </div>
-                    )}
+                  )
+                })}
+              </div>
+              {expandedEx && guide && (
+                <div className="sticker animate-page-in flex flex-col gap-3 rounded-[var(--radius-card)] bg-surface p-4">
+                  <p className="headline text-[22px] leading-[1.02]">{expandedEx.name}</p>
+                  <div>
+                    <p className="eyebrow mb-1.5 text-[12px]">How to</p>
+                    <ol className="list-decimal space-y-1 pl-4 text-[14px] text-ink">
+                      {guide.howTo.map((step, i) => (
+                        <li key={i}>{step}</li>
+                      ))}
+                    </ol>
                   </div>
-                )
-              })}
-            </div>
-          </section>
-        ))
+                  <div className="rounded-[var(--radius-control)] border-2 border-ink bg-negative-soft p-3">
+                    <p className="eyebrow mb-0.5 text-[12px] text-negative-text">Watch out for</p>
+                    <p className="text-[13px] text-ink">{guide.caution}</p>
+                  </div>
+                </div>
+              )}
+            </section>
+          )
+        })
       )}
     </div>
   )
