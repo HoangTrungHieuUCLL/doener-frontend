@@ -1,3 +1,4 @@
+import { Glass } from '@samasante/liquid-glass'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
@@ -9,16 +10,19 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode
 }
 
-// Solid variants keep a vivid fill (still need to read as buttons at a
-// glance) but swap the hard ink outline for a soft glass edge + glow;
-// secondary is full glass; ghost stays flat.
-const variantClasses: Record<Variant, string> = {
-  primary:
-    'bg-accent/90 text-white border border-white/25 shadow-[var(--shadow-glass)] press disabled:opacity-40 disabled:shadow-none',
-  secondary: 'glass text-ink press disabled:opacity-40 disabled:shadow-none',
-  ghost: 'bg-transparent text-ink-secondary active:bg-ink/5 disabled:opacity-40',
-  danger:
-    'bg-negative/90 text-white border border-white/25 shadow-[var(--shadow-glass)] press disabled:opacity-40 disabled:shadow-none',
+// primary/secondary/danger render as a real liquid-glass lens (it refracts
+// whatever's behind the button); ghost has no box to refract, stays flat.
+const variantTint: Record<Exclude<Variant, 'ghost'>, string> = {
+  primary: 'color-mix(in oklab, var(--color-accent) 65%, transparent)',
+  secondary: 'var(--color-glass)',
+  danger: 'color-mix(in oklab, var(--color-negative) 65%, transparent)',
+}
+
+const variantTextClasses: Record<Variant, string> = {
+  primary: 'text-white',
+  secondary: 'text-ink',
+  ghost: 'text-ink-secondary',
+  danger: 'text-white',
 }
 
 const sizeClasses: Record<Size, string> = {
@@ -31,14 +35,33 @@ export function Button({
   size = 'md',
   className = '',
   children,
+  disabled,
   ...rest
 }: ButtonProps) {
+  if (variant === 'ghost') {
+    return (
+      <button
+        disabled={disabled}
+        className={`tap-target inline-flex items-center justify-center gap-2 rounded-[var(--radius-control)] bg-transparent font-display font-extrabold uppercase tracking-[0.03em] text-ink-secondary transition-colors active:bg-ink/5 disabled:cursor-not-allowed disabled:opacity-40 ${sizeClasses[size]} ${className}`}
+        {...rest}
+      >
+        {children}
+      </button>
+    )
+  }
+
   return (
-    <button
-      className={`tap-target inline-flex items-center justify-center gap-2 rounded-[var(--radius-control)] font-display font-extrabold uppercase tracking-[0.03em] disabled:cursor-not-allowed ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
-      {...rest}
+    <Glass
+      className={`inline-flex rounded-[var(--radius-control)] shadow-[var(--shadow-glass)] transition-transform active:scale-[0.97] ${disabled ? 'opacity-40' : ''} ${sizeClasses[size]} ${className}`}
+      style={{ background: variantTint[variant] }}
     >
-      {children}
-    </button>
+      <button
+        disabled={disabled}
+        className={`tap-target flex h-full w-full items-center justify-center gap-2 bg-transparent font-display font-extrabold uppercase tracking-[0.03em] disabled:cursor-not-allowed ${variantTextClasses[variant]}`}
+        {...rest}
+      >
+        {children}
+      </button>
+    </Glass>
   )
 }

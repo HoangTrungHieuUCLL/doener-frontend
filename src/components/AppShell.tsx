@@ -1,5 +1,6 @@
 import type { ComponentType, SVGProps } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Glass } from '@samasante/liquid-glass'
 import { useAuth } from '../auth/AuthContext'
 import { HistoryIcon, InsightsIcon, LogoMark, PlanIcon, TodayIcon, WorkoutIcon } from './icons'
 
@@ -89,30 +90,37 @@ export function AppShell() {
           </div>
         </main>
 
-        {/* Mobile bottom tab bar: CSS-only glass, not liquidGL -- liquidGL
-            sets pointer-events: none on the lens element itself, which
-            makes an interactive nav bar (or anything with clickable
-            children) unusable. Fine for decorative panes, not for nav. */}
-        <nav className="glass fixed inset-x-2 bottom-2 z-20 flex gap-1 rounded-[var(--radius-card)] px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden">
-          {NAV_ITEMS.map(({ to, label, Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                `tap-target flex flex-1 flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] py-1.5 font-display text-[10px] font-extrabold uppercase tracking-[0.05em] transition-colors ${
-                  isActive ? 'bg-highlight/80 text-ink' : 'text-ink-secondary'
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <Icon className="h-6 w-6" strokeWidth={isActive ? 2.4 : 1.9} />
-                  {label}
-                </>
-              )}
-            </NavLink>
-          ))}
-        </nav>
+        {/* Mobile bottom tab bar: <Glass> IS the fixed positioned box,
+            wrapping the real <nav> so it measures and refracts actual
+            content (a bare, childless Glass collapses to zero size --
+            it has nothing to fit itself to). The NavLink anchors inside
+            are untouched and stay clickable, unlike liquidGL, which sets
+            pointer-events: none on the element it's applied to. */}
+        <Glass
+          className="fixed inset-x-2 bottom-2 z-20 rounded-[var(--radius-card)] md:hidden"
+          style={{ background: 'var(--color-glass)' }}
+        >
+          <nav className="flex gap-1 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+            {NAV_ITEMS.map(({ to, label, Icon }) => (
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) =>
+                  `tap-target flex flex-1 flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] py-1.5 font-display text-[10px] font-extrabold uppercase tracking-[0.05em] transition-colors ${
+                    isActive ? 'bg-highlight/80 text-ink' : 'text-ink-secondary'
+                  }`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <Icon className="h-6 w-6" strokeWidth={isActive ? 2.4 : 1.9} />
+                    {label}
+                  </>
+                )}
+              </NavLink>
+            ))}
+          </nav>
+        </Glass>
       </div>
     </div>
   )
