@@ -23,7 +23,7 @@ export function ExerciseCard({
 }) {
   return (
     <div
-      className={`relative overflow-hidden bg-ink ${framed ? 'rounded-[var(--radius-card)] border-2 border-ink' : ''} ${className}`}
+      className={`relative overflow-hidden bg-ink ${framed ? 'rounded-[var(--radius-card)] border border-white/20 shadow-[var(--shadow-glass)]' : ''} ${className}`}
     >
       <img
         src={exerciseImageUrl(exerciseKey)}

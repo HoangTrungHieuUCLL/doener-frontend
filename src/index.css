@@ -61,6 +61,12 @@
   --shadow-card: 4px 4px 0 0 var(--color-ink);
   --shadow-pop: 3px 3px 0 0 var(--color-ink);
   --shadow-lg: 6px 6px 0 0 var(--color-ink);
+
+  /* Liquid glass: translucent white over the gradient backdrop, a bright
+     top-catch border to sell the bevel, a soft glow shadow (no offset). */
+  --color-glass: rgba(255, 255, 255, 0.4);
+  --color-glass-border: rgba(255, 255, 255, 0.7);
+  --shadow-glass: 0 8px 32px rgba(20, 20, 20, 0.14);
 }
 
 html {
@@ -69,7 +75,14 @@ html {
 
 body {
   margin: 0;
-  background: var(--color-bg);
+  /* Soft color blobs give the glass something to refract/blur -- a flat
+     background would make backdrop-filter invisible. */
+  background:
+    radial-gradient(circle at 12% 15%, color-mix(in oklab, var(--color-accent) 30%, transparent), transparent 45%),
+    radial-gradient(circle at 88% 12%, color-mix(in oklab, var(--color-highlight) 45%, transparent), transparent 50%),
+    radial-gradient(circle at 50% 95%, color-mix(in oklab, var(--color-positive) 30%, transparent), transparent 55%),
+    var(--color-bg);
+  background-attachment: fixed;
   color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -118,6 +131,28 @@ body {
   box-shadow: var(--shadow-card);
 }
 
+/* Dimmed modal backdrop that also blurs whatever's behind it, so the
+   frosted dialog panel has something to refract. */
+@utility scrim {
+  background: rgba(20, 20, 20, 0.35);
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+}
+
+/* Frosted glass chrome: nav bars, headers, dialogs. Falls back to a plain
+   translucent panel (no blur) on browsers without backdrop-filter. */
+@utility glass {
+  background: var(--color-glass);
+  border: 1px solid var(--color-glass-border);
+  box-shadow: var(--shadow-glass);
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    backdrop-filter: blur(20px) saturate(1.6);
+    -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  }
+}
+
 /* Pressable sticker: sinks into its shadow on press. Pair with a
    shadow-[var(--shadow-pop)] or sticker class. */
 @utility press {
@@ -139,13 +174,17 @@ body {
   border-radius: 0.2em;
 }
 
-/* Floating stat chip over a photo: a yellow sticker, slightly tilted. */
+/* Floating stat chip over a photo: a tinted glass pill, slightly tilted. */
 .photo-chip {
-  background: var(--color-highlight);
+  background: color-mix(in oklab, var(--color-highlight) 55%, var(--color-glass));
   color: var(--color-ink);
-  border: 2px solid var(--color-ink);
-  box-shadow: 2px 2px 0 0 var(--color-ink);
+  border: 1px solid var(--color-glass-border);
+  box-shadow: var(--shadow-glass);
   transform: rotate(-3deg);
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    backdrop-filter: blur(12px) saturate(1.6);
+    -webkit-backdrop-filter: blur(12px) saturate(1.6);
+  }
 }
 
 /* Small calendar/legend dot. The ink ring keeps pale fills (yellow, lime)

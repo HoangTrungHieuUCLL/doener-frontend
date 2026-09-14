@@ -7,7 +7,7 @@ export function Card({
 }: HTMLAttributes<HTMLDivElement> & { children: ReactNode }) {
   return (
     <div
-      className={`sticker rounded-[var(--radius-card)] bg-surface p-4 ${className}`}
+      className={`glass rounded-[var(--radius-card)] p-4 ${className}`}
       {...rest}
     >
       {children}

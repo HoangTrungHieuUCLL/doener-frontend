@@ -35,7 +35,7 @@ export function Calendar({
         <button
           type="button"
           aria-label="Previous month"
-          className="tap-target flex items-center justify-center rounded-full border-2 border-ink bg-surface text-[20px] font-bold leading-none text-ink shadow-[var(--shadow-pop)] press hover:bg-highlight"
+          className="glass tap-target flex items-center justify-center rounded-full text-[20px] font-bold leading-none text-ink press hover:bg-highlight/60"
           onClick={() => onMonthChange(addMonths(month, -1))}
         >
           ‹
@@ -46,7 +46,7 @@ export function Calendar({
         <button
           type="button"
           aria-label="Next month"
-          className="tap-target flex items-center justify-center rounded-full border-2 border-ink bg-surface text-[20px] font-bold leading-none text-ink shadow-[var(--shadow-pop)] press hover:bg-highlight"
+          className="glass tap-target flex items-center justify-center rounded-full text-[20px] font-bold leading-none text-ink press hover:bg-highlight/60"
           onClick={() => onMonthChange(addMonths(month, 1))}
         >
           ›
@@ -72,12 +72,12 @@ export function Calendar({
               key={iso}
               type="button"
               onClick={() => onSelectDay?.(iso)}
-              className={`tap-target flex aspect-square flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] border-2 font-display text-[14px] font-bold transition-[transform,background-color,color] active:scale-[0.94] ${
+              className={`tap-target flex aspect-square flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] border font-display text-[14px] font-bold transition-[transform,background-color,color] active:scale-[0.94] ${
                 isSelected
-                  ? 'border-ink bg-accent text-white shadow-[var(--shadow-pop)]'
+                  ? 'border-white/25 bg-accent text-white shadow-[var(--shadow-glass)]'
                   : isToday
-                    ? 'border-ink bg-highlight text-ink'
-                    : 'border-transparent text-ink hover:bg-surface-alt'
+                    ? 'border-ink/15 bg-highlight text-ink'
+                    : 'border-transparent text-ink hover:bg-white/40'
               }`}
             >
               <span>{day}</span>

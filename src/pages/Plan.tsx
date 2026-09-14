@@ -200,11 +200,11 @@ export function Plan() {
 
           {pendingPlan && (
             <div
-              className="animate-overlay-in fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4"
+              className="animate-overlay-in scrim fixed inset-0 z-50 flex items-center justify-center p-4"
               onClick={() => setPendingPlan(null)}
             >
               <div
-                className="animate-dialog-in w-full max-w-xs rounded-[var(--radius-card)] border-2 border-ink bg-surface p-5 shadow-[var(--shadow-lg)]"
+                className="animate-dialog-in glass w-full max-w-xs rounded-[var(--radius-card)] p-5"
                 onClick={(e) => e.stopPropagation()}
               >
                 {(() => {

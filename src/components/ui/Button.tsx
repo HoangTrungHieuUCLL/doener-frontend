@@ -9,16 +9,16 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode
 }
 
-// Outlined variants sit on a hard ink shadow and sink into it on press
-// (`press` utility); ghost stays flat.
+// Solid variants keep a vivid fill (still need to read as buttons at a
+// glance) but swap the hard ink outline for a soft glass edge + glow;
+// secondary is full glass; ghost stays flat.
 const variantClasses: Record<Variant, string> = {
   primary:
-    'bg-accent text-white border-2 border-ink shadow-[var(--shadow-pop)] press disabled:opacity-40 disabled:shadow-none',
-  secondary:
-    'bg-surface text-ink border-2 border-ink shadow-[var(--shadow-pop)] press disabled:opacity-40 disabled:shadow-none',
-  ghost: 'bg-transparent text-ink-secondary active:bg-surface-alt disabled:opacity-40',
+    'bg-accent/90 text-white border border-white/25 shadow-[var(--shadow-glass)] press disabled:opacity-40 disabled:shadow-none',
+  secondary: 'glass text-ink press disabled:opacity-40 disabled:shadow-none',
+  ghost: 'bg-transparent text-ink-secondary active:bg-ink/5 disabled:opacity-40',
   danger:
-    'bg-negative text-white border-2 border-ink shadow-[var(--shadow-pop)] press disabled:opacity-40 disabled:shadow-none',
+    'bg-negative/90 text-white border border-white/25 shadow-[var(--shadow-glass)] press disabled:opacity-40 disabled:shadow-none',
 }
 
 const sizeClasses: Record<Size, string> = {

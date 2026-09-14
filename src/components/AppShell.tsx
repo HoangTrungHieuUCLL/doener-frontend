@@ -1,5 +1,6 @@
-import type { ComponentType, SVGProps } from 'react'
+import { useEffect, useRef, type ComponentType, type SVGProps } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import liquidGL from 'liquid-gl'
 import { useAuth } from '../auth/AuthContext'
 import { HistoryIcon, InsightsIcon, LogoMark, PlanIcon, TodayIcon, WorkoutIcon } from './icons'
 
@@ -30,11 +31,20 @@ function Wordmark({ size }: { size: 'sm' | 'md' }) {
 export function AppShell() {
   const { user, logout } = useAuth()
   const location = useLocation()
+  const initedRef = useRef(false)
+
+  useEffect(() => {
+    // Guard against StrictMode's double-invoke: liquidGL has no destroy API,
+    // it registers a persistent lens against a singleton renderer.
+    if (initedRef.current) return
+    initedRef.current = true
+    liquidGL({ target: '.liquidgl-nav', refraction: 0.015, bevelDepth: 0.1, frost: 4 })
+  }, [])
 
   return (
     <div className="flex min-h-dvh w-full flex-col md:flex-row">
       {/* Desktop sidebar */}
-      <aside className="hidden w-64 shrink-0 flex-col border-r-2 border-ink bg-bg px-4 py-6 md:flex">
+      <aside className="glass hidden w-64 shrink-0 flex-col px-4 py-6 md:flex">
         <div className="mb-8 px-2">
           <Wordmark size="md" />
         </div>
@@ -73,7 +83,7 @@ export function AppShell() {
 
       {/* Main content */}
       <div className="flex min-h-dvh flex-1 flex-col">
-        <header className="flex items-center justify-between border-b-2 border-ink bg-bg px-4 py-2.5 md:hidden">
+        <header className="glass flex items-center justify-between px-4 py-2.5 md:hidden">
           <Wordmark size="sm" />
           <button
             onClick={logout}
@@ -89,15 +99,17 @@ export function AppShell() {
           </div>
         </main>
 
-        {/* Mobile bottom tab bar: an ink bar, active tab gets a yellow pill. */}
-        <nav className="fixed inset-x-0 bottom-0 z-20 flex gap-1 bg-ink px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden">
+        {/* Mobile bottom tab bar: liquidGL renders the frosted glass pane
+            behind this element, so it stays transparent and only supplies
+            the rounded shape + content. */}
+        <nav className="liquidgl-nav fixed inset-x-2 bottom-2 z-20 flex gap-1 rounded-[var(--radius-card)] px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden">
           {NAV_ITEMS.map(({ to, label, Icon }) => (
             <NavLink
               key={to}
               to={to}
               className={({ isActive }) =>
                 `tap-target flex flex-1 flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] py-1.5 font-display text-[10px] font-extrabold uppercase tracking-[0.05em] transition-colors ${
-                  isActive ? 'bg-highlight text-ink' : 'text-bg/70'
+                  isActive ? 'bg-highlight/80 text-ink' : 'text-ink-secondary'
                 }`
               }
             >
