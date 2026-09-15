@@ -59,7 +59,7 @@ export function Workout() {
         <p className="mt-2 text-[15px] text-ink-secondary">Every exercise, how to do it, and what to watch for.</p>
       </header>
 
-      <details open className="sticker group flex flex-col gap-4 rounded-[var(--radius-card)] bg-highlight-soft p-4">
+      <details className="sticker group flex flex-col gap-4 rounded-[var(--radius-card)] bg-highlight-soft p-4">
         <summary className="headline flex cursor-pointer list-none items-center justify-between gap-2 text-[26px] [&::-webkit-details-marker]:hidden">
           <span>How this plan <span className="marker">works</span></span>
           <svg
