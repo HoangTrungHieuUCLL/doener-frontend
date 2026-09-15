@@ -18,6 +18,13 @@ const EXERCISE_MEDIA: Partial<Record<string, string>> = {
   b_back_extension: '/exercises/back-extension.gif',
   b_reverse_lunge: '/exercises/reverse-lunges.gif',
   b_reverse_fly: '/exercises/reverse-fly.gif',
+  b_chest_press: '/exercises/chess-press.gif',
+  b_side_plank: '/exercises/side-plank.gif',
+  c_hip_thrust: '/exercises/hip-thrust.gif',
+  c_leg_press: '/exercises/leg-press.gif',
+  c_lat_pulldown: '/exercises/lat-pulldown.gif',
+  c_machine_fly: '/exercises/machine-fly.gif',
+  c_cable_lateral_raise: '/exercises/cable-lateral-raise.gif',
   custom_running: '/exercises/running.gif',
 }
 
