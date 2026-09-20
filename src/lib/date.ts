@@ -47,6 +47,23 @@ export function formatShortDate(iso: string): string {
   return `${MONTH[date.getMonth()]} ${date.getDate()}`
 }
 
+/** A calendar date relative to today, for "when did I last do this":
+ * "Today", "Yesterday", "Tue · 5 days ago" within the last week, and a
+ * plain "Sep 11" beyond that. Compares calendar days in local time, so it
+ * never reports "Today" for a date that has already rolled over. */
+export function formatRelativeDay(iso: string, now: Date = new Date()): string {
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number)
+  const then = new Date(y, (m || 1) - 1, d || 1)
+  if (Number.isNaN(then.getTime())) return iso
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const days = Math.round((today.getTime() - then.getTime()) / 86_400_000)
+
+  if (days === 0) return 'Today'
+  if (days === 1) return 'Yesterday'
+  if (days > 1 && days < 7) return `${WEEKDAY[then.getDay()]} · ${days} days ago`
+  return formatShortDate(iso)
+}
+
 export const MONTH_NAMES = MONTH
 export const WEEKDAY_NAMES = WEEKDAY
 

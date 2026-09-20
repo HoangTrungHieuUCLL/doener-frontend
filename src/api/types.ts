@@ -124,11 +124,34 @@ export interface VolumePoint {
   workout_key: string
 }
 
+export interface LastSetEntry {
+  set_number: number
+  weight_kg: number | null
+  reps: number | null
+  duration_sec: number | null
+}
+
+/** One past session's top effort for an exercise, for the sparkline. */
+export interface ExerciseTrendPoint {
+  session_id: number
+  date: string
+  top_weight_kg: number | null
+  top_reps: number | null
+  top_duration_sec: number | null
+}
+
+/** GET /stats/last-sets -- per-exercise recap of the last session it was
+ * logged in. The flat weight/reps/duration fields are that session's *final*
+ * set, which is what the logging inputs seed from. */
 export interface LastSet {
   exercise_id: number
   weight_kg: number | null
   reps: number | null
   duration_sec: number | null
+  session_id: number
+  date: string
+  sets: LastSetEntry[]
+  trend: ExerciseTrendPoint[]
 }
 
 export interface ExerciseProgressPoint {

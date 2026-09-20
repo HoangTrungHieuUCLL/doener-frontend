@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { useExercises } from '../api/hooks/useExercises'
 import { usePlan } from '../api/hooks/usePlan'
-import { useLastSets } from '../api/hooks/useStats'
+import { useLastSets, usePrStats } from '../api/hooks/useStats'
 import {
   useFinishSession,
   useLogCardio,
@@ -10,14 +10,22 @@ import {
   useSession,
   useStartSession,
 } from '../api/hooks/useSessions'
-import type { Exercise, LastSet, SessionSetDetail, SessionWorkoutKey } from '../api/types'
+import type {
+  Exercise,
+  LastSet,
+  LastSetEntry,
+  PersonalRecord,
+  SessionSetDetail,
+  SessionWorkoutKey,
+} from '../api/types'
 import { RestTimer } from '../components/RestTimer'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Card } from '../components/ui/Card'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { ExerciseCard } from '../components/ui/ExerciseCard'
-import { todayISO } from '../lib/date'
+import { Sparkline } from '../components/ui/Sparkline'
+import { formatRelativeDay, todayISO } from '../lib/date'
 import { formatDuration, useCountdown, usePausableStopwatch } from '../lib/useStopwatch'
 import { useLocalStorageState } from '../lib/useLocalStorageState'
 import { WORKOUT_LABELS, targetLabel } from '../lib/workouts'
@@ -183,7 +191,10 @@ interface ActiveSessionProps {
 function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises, onReset }: ActiveSessionProps) {
   const { displaySec, activeSec, isPaused, toggle: togglePause } = usePausableStopwatch(startedAt)
   const finishSession = useFinishSession()
-  const { data: lastSets } = useLastSets()
+  // Excluding this session keeps "last time" meaning a previous workout,
+  // even after sets have been logged here.
+  const { data: lastSets } = useLastSets(sessionId)
+  const { data: prs } = usePrStats()
   const [restTimer, setRestTimer] = useState<{ key: number; durationSec: number } | null>(null)
   const [newPrIds, setNewPrIds] = useState<Record<number, boolean>>({})
   const [viewMode, setViewMode] = useLocalStorageState<'focus' | 'list'>('doener.todayView', 'focus')
@@ -200,6 +211,12 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
     for (const s of lastSets ?? []) map[s.exercise_id] = s
     return map
   }, [lastSets])
+
+  const bestByExercise = useMemo(() => {
+    const map: Record<number, PersonalRecord> = {}
+    for (const pr of prs ?? []) map[pr.exercise_id] = pr
+    return map
+  }, [prs])
 
   const warmupExercises = useMemo(
     () => exercises.filter((e) => e.category === 'warmup').sort((a, b) => a.id - b.id),
@@ -335,6 +352,7 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
           sessionId={sessionId}
           loggedSets={loggedSets}
           lastSetByExercise={lastSetByExercise}
+          bestByExercise={bestByExercise}
           newPrIds={newPrIds}
           onLogged={(exerciseId, restSec, isNewPr) => handleSetLogged(exerciseId, restSec, false, isNewPr)}
         />
@@ -349,6 +367,7 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
                   sessionId={sessionId}
                   loggedSets={loggedSets.filter((s) => s.exercise_id === ex.id)}
                   lastSet={lastSetByExercise[ex.id] ?? null}
+                  best={bestByExercise[ex.id] ?? null}
                   isNewPr={Boolean(newPrIds[ex.id])}
                   onLogged={(isNewPr) => handleSetLogged(ex.id, ex.rest_sec, true, isNewPr)}
                 />
@@ -364,6 +383,7 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
                   sessionId={sessionId}
                   loggedSets={loggedSets.filter((s) => s.exercise_id === ex.id)}
                   lastSet={lastSetByExercise[ex.id] ?? null}
+                  best={bestByExercise[ex.id] ?? null}
                   isNewPr={Boolean(newPrIds[ex.id])}
                   onLogged={(isNewPr) => handleSetLogged(ex.id, ex.rest_sec, false, isNewPr)}
                 />
@@ -391,6 +411,7 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
             sessionId={sessionId}
             loggedSets={loggedSets.filter((s) => s.exercise_id === queue[currentIndex].id)}
             lastSet={lastSetByExercise[queue[currentIndex].id] ?? null}
+            best={bestByExercise[queue[currentIndex].id] ?? null}
             isNewPr={Boolean(newPrIds[queue[currentIndex].id])}
             onLogged={(isNewPr) =>
               handleSetLogged(queue[currentIndex].id, queue[currentIndex].rest_sec, warmupIds.has(queue[currentIndex].id), isNewPr)
@@ -462,11 +483,161 @@ function round1(n: number): number {
   return Math.round(n * 10) / 10
 }
 
+type SetShape = { weight_kg: number | null; reps: number | null; duration_sec: number | null }
+
+/** "40 kg x 10" for weighted work, "45s" for timed work. */
+function describeSet(exercise: Exercise, set: SetShape): string {
+  if (exercise.type === 'time') {
+    return set.duration_sec === null ? '—' : `${set.duration_sec}s`
+  }
+  const parts: string[] = []
+  if (set.weight_kg !== null) parts.push(`${round1(set.weight_kg)} kg`)
+  if (set.reps !== null) parts.push(`× ${set.reps}`)
+  return parts.length > 0 ? parts.join(' ') : '—'
+}
+
+/** The set worth quoting from a session: the heaviest (or longest held),
+ * which is what you actually compare against when deciding today's weight. */
+function topSet<T extends SetShape>(exercise: Exercise, sets: T[]): T | null {
+  if (sets.length === 0) return null
+  const score = (s: SetShape) =>
+    exercise.type === 'time' ? (s.duration_sec ?? 0) : (s.weight_kg ?? 0) * 1000 + (s.reps ?? 0)
+  return sets.reduce((best, s) => (score(s) > score(best) ? s : best), sets[0])
+}
+
+function setCountLabel(n: number): string {
+  return `${n} set${n === 1 ? '' : 's'}`
+}
+
+/** What you did last time with this exercise, what you have done with it so
+ * far today, and your best ever -- so progress is visible while logging
+ * rather than only on the History and Insights tabs. */
+function LastResult({
+  exercise,
+  lastSet,
+  best,
+  thisSessionSets,
+}: {
+  exercise: Exercise
+  lastSet: LastSet | null
+  best: PersonalRecord | null
+  thisSessionSets: SessionSetDetail[]
+}) {
+  const last = lastSet ? topSet(exercise, lastSet.sets) : null
+  // Timed exercises have no weight to hold a record against.
+  const showBest = exercise.type !== 'time' && best !== null
+
+  const trendValues = (lastSet?.trend ?? [])
+    .map((p) => (exercise.type === 'time' ? p.top_duration_sec : p.top_weight_kg))
+    .filter((v): v is number => v !== null)
+
+  return (
+    <details className="group border-b-2 border-ink/10 px-4 py-3">
+      <summary className="flex cursor-pointer list-none items-center gap-3 [&::-webkit-details-marker]:hidden">
+        <div className="min-w-0 flex-1">
+          <p className="eyebrow text-[11px] text-ink-tertiary">
+            Last time
+            {lastSet && <span className="normal-case tracking-normal"> · {formatRelativeDay(lastSet.date)}</span>}
+          </p>
+          {last && lastSet ? (
+            <p className="font-display text-[19px] font-black leading-tight tabular-nums text-ink">
+              {describeSet(exercise, last)}
+              <span className="ml-1.5 text-[13px] font-bold text-ink-tertiary">
+                {setCountLabel(lastSet.sets.length)}
+              </span>
+            </p>
+          ) : (
+            <p className="text-[14px] text-ink-secondary">No logs yet — this one sets your baseline.</p>
+          )}
+          {thisSessionSets.length > 0 && (
+            <p className="mt-0.5 text-[13px] font-semibold text-accent-strong">
+              This session · {setCountLabel(thisSessionSets.length)}
+            </p>
+          )}
+        </div>
+
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          {showBest && (
+            <p className="eyebrow text-[11px] text-ink-tertiary">
+              Best <span className="text-ink">{round1(best.best_weight_kg)} kg</span>
+            </p>
+          )}
+          {trendValues.length > 1 && (
+            <Sparkline
+              values={trendValues}
+              className="h-6 w-[72px]"
+              label={`Trend over the last ${trendValues.length} sessions`}
+            />
+          )}
+        </div>
+
+        {(lastSet !== null || thisSessionSets.length > 0) && (
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3"
+            className="shrink-0 text-ink-tertiary transition-transform group-open:rotate-180"
+          >
+            <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </summary>
+
+      {(lastSet !== null || thisSessionSets.length > 0) && (
+        <div className="mt-3 flex flex-col gap-2">
+          {lastSet && lastSet.sets.length > 0 && (
+            <SetBreakdown exercise={exercise} label="Last time" sets={lastSet.sets} />
+          )}
+          {thisSessionSets.length > 0 && (
+            <SetBreakdown exercise={exercise} label="This session" sets={thisSessionSets} tone="accent" />
+          )}
+        </div>
+      )}
+    </details>
+  )
+}
+
+function SetBreakdown({
+  exercise,
+  label,
+  sets,
+  tone = 'neutral',
+}: {
+  exercise: Exercise
+  label: string
+  sets: (LastSetEntry | SessionSetDetail)[]
+  tone?: 'neutral' | 'accent'
+}) {
+  return (
+    <div>
+      <p className="eyebrow mb-1 text-[11px] text-ink-tertiary">{label}</p>
+      <ul className="flex flex-wrap gap-1.5">
+        {sets.map((set) => (
+          <li
+            key={set.set_number}
+            className={`rounded-full border-2 px-2 py-0.5 font-display text-[12px] font-extrabold tabular-nums ${
+              tone === 'accent'
+                ? 'border-accent bg-accent-soft text-accent-strong'
+                : 'border-ink/15 bg-surface-alt text-ink'
+            }`}
+          >
+            <span className="opacity-50">{set.set_number}</span> {describeSet(exercise, set)}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 function ExerciseLogCard({
   exercise,
   sessionId,
   loggedSets,
   lastSet,
+  best,
   isNewPr,
   onLogged,
 }: {
@@ -474,6 +645,7 @@ function ExerciseLogCard({
   sessionId: number
   loggedSets: SessionSetDetail[]
   lastSet: LastSet | null
+  best: PersonalRecord | null
   isNewPr: boolean
   onLogged: (isNewPr: boolean) => void
 }) {
@@ -529,6 +701,13 @@ function ExerciseLogCard({
         className="h-[40vh] border-b-2 border-ink"
       />
 
+      <LastResult
+        exercise={exercise}
+        lastSet={lastSet}
+        best={best}
+        thisSessionSets={loggedSets}
+      />
+
       <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-4 p-4">
         {exercise.type === 'time' ? (
           <Stepper label="Seconds" value={durationSec} step={5} onChange={setDurationSec} />
@@ -562,6 +741,7 @@ function CustomExercisePicker({
   sessionId,
   loggedSets,
   lastSetByExercise,
+  bestByExercise,
   newPrIds,
   onLogged,
 }: {
@@ -569,6 +749,7 @@ function CustomExercisePicker({
   sessionId: number
   loggedSets: SessionSetDetail[]
   lastSetByExercise: Record<number, LastSet>
+  bestByExercise: Record<number, PersonalRecord>
   newPrIds: Record<number, boolean>
   onLogged: (exerciseId: number, restSec: number, isNewPr: boolean) => void
 }) {
@@ -590,6 +771,7 @@ function CustomExercisePicker({
           sessionId={sessionId}
           loggedSets={loggedSets.filter((s) => s.exercise_id === picked.id)}
           lastSet={lastSetByExercise[picked.id] ?? null}
+          best={bestByExercise[picked.id] ?? null}
           isNewPr={Boolean(newPrIds[picked.id])}
           onLogged={(isNewPr) => onLogged(picked.id, picked.rest_sec, isNewPr)}
         />

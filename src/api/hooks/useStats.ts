@@ -17,11 +17,20 @@ export function usePrStats() {
   })
 }
 
-/** Most recently logged set per exercise, across all past sessions. */
-export function useLastSets() {
+/** Per-exercise recap of the last session each exercise was logged in.
+ *
+ * Pass the in-progress session id as `excludeSessionId` so "last time" keeps
+ * meaning a *previous* session and doesn't start reflecting sets logged
+ * moments ago in the current one. */
+export function useLastSets(excludeSessionId: number | null = null) {
   return useQuery({
-    queryKey: queryKeys.statsLastSets(),
-    queryFn: () => api.get<LastSet[]>('/stats/last-sets'),
+    queryKey: queryKeys.statsLastSets(excludeSessionId),
+    queryFn: () =>
+      api.get<LastSet[]>(
+        excludeSessionId === null
+          ? '/stats/last-sets'
+          : `/stats/last-sets?exclude_session_id=${excludeSessionId}`,
+      ),
   })
 }
 

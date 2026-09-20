@@ -57,8 +57,12 @@ export function useLogSet() {
       api.post<SetLog>(`/sessions/${sessionId}/sets`, body),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.session(variables.sessionId) })
+      // Refreshes the "Best" line on the exercise card when this set set one.
       queryClient.invalidateQueries({ queryKey: queryKeys.statsPrs() })
       queryClient.invalidateQueries({ queryKey: ['stats', 'volume'] })
+      // Deliberately not stats/last-sets: "last time" describes a previous
+      // session and must not start reflecting the set just logged. The
+      // finish-session invalidation picks it up for the next workout.
     },
   })
 }

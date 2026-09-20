@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { addMonths, daysInMonth, monthDates, nextWeekdayOccurrences, parseUtcTimestamp, startOfMonth } from './date'
+import {
+  addMonths,
+  daysInMonth,
+  formatRelativeDay,
+  monthDates,
+  nextWeekdayOccurrences,
+  parseUtcTimestamp,
+  startOfMonth,
+} from './date'
 
 describe('calendar month math', () => {
   it('startOfMonth returns the 1st', () => {
@@ -47,5 +55,33 @@ describe('calendar month math', () => {
     expect(parseUtcTimestamp('2026-09-11T08:47:29+02:00').getTime()).toBe(
       Date.parse('2026-09-11T08:47:29+02:00'),
     )
+  })
+})
+
+describe('formatRelativeDay', () => {
+  const now = new Date(2026, 8, 20) // Sun Sep 20 2026, local time
+
+  it('names today and yesterday', () => {
+    expect(formatRelativeDay('2026-09-20', now)).toBe('Today')
+    expect(formatRelativeDay('2026-09-19', now)).toBe('Yesterday')
+  })
+
+  it('counts days within the past week, with the weekday', () => {
+    expect(formatRelativeDay('2026-09-15', now)).toBe('Tue · 5 days ago')
+    expect(formatRelativeDay('2026-09-14', now)).toBe('Mon · 6 days ago')
+  })
+
+  it('falls back to a short date from a week out', () => {
+    expect(formatRelativeDay('2026-09-13', now)).toBe('Sep 13')
+    expect(formatRelativeDay('2026-06-01', now)).toBe('Jun 1')
+  })
+
+  it('accepts a full timestamp, not just a plain date', () => {
+    expect(formatRelativeDay('2026-09-19T08:47:29Z', now)).toBe('Yesterday')
+  })
+
+  it('does not call a past date "Today" just because it is within 24 hours', () => {
+    const justAfterMidnight = new Date(2026, 8, 20, 0, 30)
+    expect(formatRelativeDay('2026-09-19', justAfterMidnight)).toBe('Yesterday')
   })
 })
