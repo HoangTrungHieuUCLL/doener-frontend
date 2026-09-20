@@ -523,7 +523,11 @@ function LastResult({
   best: PersonalRecord | null
   thisSessionSets: SessionSetDetail[]
 }) {
-  const last = lastSet ? topSet(exercise, lastSet.sets) : null
+  // Tolerate a backend that predates the richer recap payload: the two
+  // services deploy independently, so this can briefly run against one that
+  // still returns only the flat last-set fields.
+  const lastSessionSets = lastSet?.sets ?? []
+  const last = topSet(exercise, lastSessionSets)
   // Timed exercises have no weight to hold a record against.
   const showBest = exercise.type !== 'time' && best !== null
 
@@ -543,7 +547,7 @@ function LastResult({
             <p className="font-display text-[19px] font-black leading-tight tabular-nums text-ink">
               {describeSet(exercise, last)}
               <span className="ml-1.5 text-[13px] font-bold text-ink-tertiary">
-                {setCountLabel(lastSet.sets.length)}
+                {setCountLabel(lastSessionSets.length)}
               </span>
             </p>
           ) : (
@@ -588,8 +592,8 @@ function LastResult({
 
       {(lastSet !== null || thisSessionSets.length > 0) && (
         <div className="mt-3 flex flex-col gap-2">
-          {lastSet && lastSet.sets.length > 0 && (
-            <SetBreakdown exercise={exercise} label="Last time" sets={lastSet.sets} />
+          {lastSessionSets.length > 0 && (
+            <SetBreakdown exercise={exercise} label="Last time" sets={lastSessionSets} />
           )}
           {thisSessionSets.length > 0 && (
             <SetBreakdown exercise={exercise} label="This session" sets={thisSessionSets} tone="accent" />
