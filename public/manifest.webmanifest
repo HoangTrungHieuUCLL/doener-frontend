@@ -1,0 +1,16 @@
+{
+  "name": "Doener",
+  "short_name": "Doener",
+  "description": "A calm, minimal workout tracker for logging sessions, planning your week, and training together with a friend.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFFBEA",
+  "theme_color": "#FFFBEA",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

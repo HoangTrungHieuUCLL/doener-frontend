@@ -1,0 +1,13 @@
+<!-- Source artwork for the generated PNG app icons (apple-touch-icon.png,
+     icon-192.png, icon-512.png). Deliberately square with no corner radius:
+     iOS and Android apply their own mask, and baking one in here produces a
+     double-rounded icon. Regenerate the PNGs from this file after editing. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect width="32" height="32" fill="#141414"/>
+  <g transform="translate(16 16) scale(1.15) translate(-16 -16)">
+    <path d="M16 8.5c3.1 2.9 4.9 7.2 4.9 12.5v3h-9.8v-3c0-5.3 1.8-9.6 4.9-12.5z" fill="#FFD02E"/>
+    <path d="M13.2 16.2q2.8 1.2 5.6 0M12.2 19.6q3.8 1.5 7.6 0" stroke="#141414" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+    <rect x="15.1" y="4.5" width="1.8" height="22.5" rx="0.9" fill="#FFFBEA"/>
+    <rect x="12.5" y="4.5" width="7" height="1.8" rx="0.9" fill="#FFFBEA"/>
+  </g>
+</svg>
