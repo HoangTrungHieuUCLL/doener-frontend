@@ -23,26 +23,20 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Card } from '../components/ui/Card'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
+import { AddExerciseSheet } from '../components/AddExerciseSheet'
+import type { Placement } from '../components/AddExerciseSheet'
 import { ExerciseCard } from '../components/ui/ExerciseCard'
 import { Sparkline } from '../components/ui/Sparkline'
 import { formatRelativeDay, todayISO } from '../lib/date'
 import { formatDuration, useCountdown, usePausableStopwatch } from '../lib/useStopwatch'
 import { useLocalStorageState } from '../lib/useLocalStorageState'
-import { WORKOUT_LABELS, targetLabel } from '../lib/workouts'
+import { CATALOG_SECTIONS, WORKOUT_LABELS, targetLabel } from '../lib/workouts'
+import { buildSessionQueue } from '../lib/sessionQueue'
+import type { AddedExercise } from '../lib/sessionQueue'
 
 function isSessionWorkoutKey(key: string | undefined | null): key is SessionWorkoutKey {
   return key === 'A' || key === 'B' || key === 'C' || key === 'cardio' || key === 'custom'
 }
-
-// Picker groups for "Choose my own exercises" -- every category in the
-// catalog, in a sensible browsing order.
-const PICKER_SECTIONS: { key: string; label: string }[] = [
-  { key: 'warmup', label: 'Warm-up' },
-  { key: 'A', label: WORKOUT_LABELS.A },
-  { key: 'B', label: WORKOUT_LABELS.B },
-  { key: 'C', label: WORKOUT_LABELS.C },
-  { key: 'custom', label: 'Standalone' },
-]
 
 export function Today() {
   const today = todayISO()
@@ -95,6 +89,9 @@ export function Today() {
 
   return (
     <ActiveSession
+      // Re-mount per session so session-scoped state (added exercises, PR
+      // flags, rest timer) never carries over into the next workout.
+      key={session.id}
       sessionId={session.id}
       workoutKey={session.workout_key}
       startedAt={session.started_at}
@@ -199,6 +196,14 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
   const [newPrIds, setNewPrIds] = useState<Record<number, boolean>>({})
   const [viewMode, setViewMode] = useLocalStorageState<'focus' | 'list'>('doener.todayView', 'focus')
   const [confirmReset, setConfirmReset] = useState(false)
+  // Scoped to this session: an exercise added today doesn't change the
+  // workout itself. Kept in browser storage so it survives a reload before
+  // any set has been logged against it.
+  const [added, setAdded] = useLocalStorageState<AddedExercise[]>(
+    `doener.addedExercises.${sessionId}`,
+    [],
+  )
+  const [picking, setPicking] = useState(false)
 
   async function handleReset() {
     await finishSession.mutateAsync({ sessionId, duration_sec: activeSec })
@@ -227,13 +232,24 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
     [exercises, workoutKey],
   )
 
-  // One-at-a-time queue: warm-up first, then the main workout. Cardio has no
-  // exercise list (just CardioForm), so it never uses focus mode.
+  // One-at-a-time queue: warm-up first, then the main workout, then anything
+  // added mid-session. Cardio has no exercise list (just CardioForm), so it
+  // never uses focus mode.
   const queue = useMemo(
-    () => (workoutKey === 'cardio' ? [] : [...warmupExercises, ...mainExercises]),
-    [workoutKey, warmupExercises, mainExercises],
+    () =>
+      workoutKey === 'cardio'
+        ? []
+        : buildSessionQueue([...warmupExercises, ...mainExercises], added, loggedSets, exercises),
+    [workoutKey, warmupExercises, mainExercises, added, loggedSets, exercises],
   )
   const warmupIds = useMemo(() => new Set(warmupExercises.map((e) => e.id)), [warmupExercises])
+  const queueIds = useMemo(() => new Set(queue.map((e) => e.id)), [queue])
+  const addedIds = useMemo(() => new Set(added.map((a) => a.exerciseId)), [added])
+  // Everything in the queue the workout itself didn't put there.
+  const extraExercises = useMemo(
+    () => queue.filter((e) => !warmupIds.has(e.id) && !mainExercises.some((m) => m.id === e.id)),
+    [queue, warmupIds, mainExercises],
+  )
 
   // Derived purely from logged sets -- no separate "current exercise" state
   // to keep in sync. The moment enough sets are logged for the exercise in
@@ -259,6 +275,24 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
 
   async function handleFinish() {
     await finishSession.mutateAsync({ sessionId, duration_sec: activeSec })
+  }
+
+  const currentExercise = currentIndex < queue.length ? queue[currentIndex] : null
+
+  function handleAddExercise(exerciseId: number, placement: Placement) {
+    setAdded((prev) => [
+      ...prev,
+      {
+        exerciseId,
+        afterExerciseId: placement === 'next' ? (currentExercise?.id ?? null) : null,
+      },
+    ])
+    setPicking(false)
+  }
+
+  // Only removable until it has sets: once logged, it is part of the record.
+  function handleRemoveAdded(exerciseId: number) {
+    setAdded((prev) => prev.filter((a) => a.exerciseId !== exerciseId))
   }
 
   return (
@@ -390,11 +424,39 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
               ))}
             </Section>
           )}
+          {extraExercises.length > 0 && (
+            <Section title="Added this session">
+              {extraExercises.map((ex) => (
+                <div key={ex.id} className="flex flex-col gap-2">
+                  <ExerciseLogCard
+                    exercise={ex}
+                    sessionId={sessionId}
+                    loggedSets={loggedSets.filter((s) => s.exercise_id === ex.id)}
+                    lastSet={lastSetByExercise[ex.id] ?? null}
+                    best={bestByExercise[ex.id] ?? null}
+                    isNewPr={Boolean(newPrIds[ex.id])}
+                    onLogged={(isNewPr) => handleSetLogged(ex.id, ex.rest_sec, false, isNewPr)}
+                  />
+                  <RemoveAddedButton
+                    exercise={ex}
+                    logged={loggedSets.some((s) => s.exercise_id === ex.id)}
+                    onRemove={() => handleRemoveAdded(ex.id)}
+                  />
+                </div>
+              ))}
+            </Section>
+          )}
         </>
       ) : currentIndex < queue.length ? (
         <section className="flex flex-col gap-3">
           <div className="eyebrow flex items-center justify-between text-[12px]">
-            <span>{warmupIds.has(queue[currentIndex].id) ? 'Warm-up' : WORKOUT_LABELS[workoutKey]}</span>
+            <span>
+              {warmupIds.has(queue[currentIndex].id)
+                ? 'Warm-up'
+                : addedIds.has(queue[currentIndex].id)
+                  ? 'Added'
+                  : WORKOUT_LABELS[workoutKey]}
+            </span>
             <span>
               {currentIndex + 1} of {queue.length}
             </span>
@@ -417,6 +479,13 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
               handleSetLogged(queue[currentIndex].id, queue[currentIndex].rest_sec, warmupIds.has(queue[currentIndex].id), isNewPr)
             }
           />
+          {addedIds.has(queue[currentIndex].id) && (
+            <RemoveAddedButton
+              exercise={queue[currentIndex]}
+              logged={loggedSets.some((s) => s.exercise_id === queue[currentIndex].id)}
+              onRemove={() => handleRemoveAdded(queue[currentIndex].id)}
+            />
+          )}
         </section>
       ) : (
         <p className="headline py-6 text-center text-[28px]">
@@ -424,10 +493,49 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
         </p>
       )}
 
+      {workoutKey !== 'cardio' && workoutKey !== 'custom' && (
+        <Button variant="secondary" size="md" onClick={() => setPicking(true)}>
+          + Add an exercise
+        </Button>
+      )}
+
+      {picking && (
+        <AddExerciseSheet
+          exercises={exercises}
+          inQueueIds={queueIds}
+          currentExerciseName={currentExercise?.name ?? null}
+          onAdd={handleAddExercise}
+          onClose={() => setPicking(false)}
+        />
+      )}
+
       <Button size="lg" variant="primary" onClick={handleFinish} disabled={finishSession.isPending}>
         {finishSession.isPending ? 'Finishing…' : 'Finish workout'}
       </Button>
     </div>
+  )
+}
+
+/** Added exercises can be taken back off the list, but only while nothing
+ * has been logged against them -- a logged set is part of the record. */
+function RemoveAddedButton({
+  exercise,
+  logged,
+  onRemove,
+}: {
+  exercise: Exercise
+  logged: boolean
+  onRemove: () => void
+}) {
+  if (logged) return null
+  return (
+    <button
+      type="button"
+      onClick={onRemove}
+      className="press self-center rounded-full border-2 border-ink bg-surface px-3 py-1.5 font-display text-[12px] font-extrabold uppercase tracking-[0.03em] text-ink-secondary shadow-[var(--shadow-pop)]"
+    >
+      Remove {exercise.name}
+    </button>
   )
 }
 
@@ -785,7 +893,7 @@ function CustomExercisePicker({
 
   return (
     <div className="flex flex-col gap-6">
-      {PICKER_SECTIONS.map(({ key, label }) => {
+      {CATALOG_SECTIONS.map(({ key, label }) => {
         const items = exercises.filter((e) => e.category === key).sort((a, b) => a.id - b.id)
         if (items.length === 0) return null
         return (

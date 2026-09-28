@@ -28,3 +28,13 @@ export function targetLabel(exercise: Exercise): string {
   }
   return `target ${exercise.sets}×${exercise.reps ?? '?'}`
 }
+
+/** The catalog grouped for browsing, in a sensible order. Used by the
+ * custom-workout picker and by "add an exercise" mid-session. */
+export const CATALOG_SECTIONS: { key: string; label: string }[] = [
+  { key: 'warmup', label: 'Warm-up' },
+  { key: 'A', label: WORKOUT_LABELS.A },
+  { key: 'B', label: WORKOUT_LABELS.B },
+  { key: 'C', label: WORKOUT_LABELS.C },
+  { key: 'custom', label: 'Standalone' },
+]
