@@ -43,7 +43,7 @@ export function AddExerciseSheet({
 
   return (
     <div
-      className="animate-overlay-in scrim fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+      className="animate-overlay-in scrim fixed inset-x-0 top-0 z-50 h-[var(--app-h)] flex items-end justify-center sm:items-center"
       onClick={onClose}
     >
       <div

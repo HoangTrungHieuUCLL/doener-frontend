@@ -19,7 +19,7 @@ export function ConfirmDialog({
 }) {
   return (
     <div
-      className="animate-overlay-in scrim fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="animate-overlay-in scrim fixed inset-x-0 top-0 z-50 h-[var(--app-h)] flex items-center justify-center p-4"
       onClick={onCancel}
     >
       <div

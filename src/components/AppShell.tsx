@@ -36,7 +36,7 @@ export function AppShell() {
   // never scrolls, so the header and bottom tab bar stay put instead of riding
   // iOS's scroll and toolbar resizing.
   return (
-    <div className="flex h-dvh w-full flex-col overflow-hidden md:flex-row">
+    <div className="relative flex h-[var(--app-h)] w-full flex-col overflow-hidden md:flex-row">
       {/* Desktop sidebar */}
       <aside className="glass hidden w-64 shrink-0 flex-col overflow-y-auto px-4 py-6 md:flex">
         <div className="mb-8 px-2">
@@ -119,7 +119,7 @@ export function AppShell() {
             inline display: inline-block, which beats any class-based display. */}
         <div className="md:hidden">
           <Glass
-            className="fixed inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-20 rounded-[var(--radius-card)]"
+            className="absolute inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-20 rounded-[var(--radius-card)]"
             style={{ background: 'var(--color-glass)' }}
           >
             <nav className="flex gap-1 px-2 py-2">

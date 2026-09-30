@@ -8,6 +8,7 @@ import {
   useLogCardio,
   useLogSet,
   useSession,
+  useSessionsOnDate,
   useStartSession,
 } from '../api/hooks/useSessions'
 import type {
@@ -49,8 +50,21 @@ export function Today() {
   const { data: session, isLoading: sessionLoading } = useSession(activeSessionId)
   const startSession = useStartSession()
 
-  const planWorkoutKey = planEntries?.find((p) => p.date === today)?.workout_key ?? null
-  const plannedKey = isSessionWorkoutKey(planWorkoutKey) ? planWorkoutKey : null
+  const { data: todaysSessions } = useSessionsOnDate(today)
+  const finishedToday = (todaysSessions?.items ?? []).filter((s) => s.finished_at !== null)
+
+  // A day can hold several planned workouts. The next one to start is the
+  // first that no finished session today has used up yet.
+  const plannedKey = useMemo(() => {
+    const done = finishedToday.map((s) => s.workout_key as string)
+    for (const entry of planEntries ?? []) {
+      if (entry.date !== today || !isSessionWorkoutKey(entry.workout_key)) continue
+      const used = done.indexOf(entry.workout_key)
+      if (used === -1) return entry.workout_key
+      done.splice(used, 1)
+    }
+    return null
+  }, [planEntries, finishedToday, today])
 
   async function beginSession() {
     if (!plannedKey) return
@@ -71,9 +85,14 @@ export function Today() {
       <div className="flex flex-col items-center gap-10 pt-6 text-center">
         <header className="flex flex-col items-center gap-3">
           <h1 className="headline text-[64px]">Today</h1>
-          {!plannedKey && (
+          {!plannedKey && finishedToday.length === 0 && (
             <p className="max-w-xs text-[15px] text-ink-secondary">
               Nothing planned for today — head to Plan to assign a workout.
+            </p>
+          )}
+          {!plannedKey && finishedToday.length > 0 && (
+            <p className="max-w-xs text-[15px] text-ink-secondary">
+              Good workout today. Planning another one? Head to Plan to add it.
             </p>
           )}
         </header>

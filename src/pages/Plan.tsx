@@ -1,15 +1,13 @@
 import { useMemo, useState } from 'react'
-import { useExercises } from '../api/hooks/useExercises'
 import { useDeletePlan, usePlan, useSetPlan } from '../api/hooks/usePlan'
+import { useSessionsOnDate } from '../api/hooks/useSessions'
 import type { WorkoutKey } from '../api/types'
 import { Card } from '../components/ui/Card'
 import { Calendar } from '../components/ui/Calendar'
 import { Button } from '../components/ui/Button'
-import { ExerciseCard } from '../components/ui/ExerciseCard'
 import { monthDates, nextWeekdayOccurrences, todayISO, WEEKDAY_NAMES } from '../lib/date'
-import { WORKOUT_DOT, WORKOUT_LABELS, WORKOUT_OPTIONS, targetLabel } from '../lib/workouts'
+import { WORKOUT_DOT, WORKOUT_LABELS, WORKOUT_OPTIONS } from '../lib/workouts'
 
-const PREVIEWABLE_KEYS: WorkoutKey[] = ['A', 'B', 'C']
 const REPEAT_WEEKS = 8
 
 // Clearer than the generic "Custom" label everywhere else, just for this picker.
@@ -27,6 +25,10 @@ export function Plan() {
   // Single-day mode only: which workout was just picked, awaiting the
   // this-date-vs-every-weekday-vs-cancel choice.
   const [pendingPlan, setPendingPlan] = useState<{ date: string; key: WorkoutKey } | null>(null)
+  // Single-day mode, on a day with a finished workout: the picker stays
+  // hidden until "Yes" to planning another one, which is then added to that
+  // day rather than replacing what was planned.
+  const [addingAnother, setAddingAnother] = useState(false)
 
   const dates = useMemo(() => monthDates(month), [month])
   const from = dates[0]
@@ -34,19 +36,25 @@ export function Plan() {
   const { data: planEntries, isLoading } = usePlan(from, to)
   const setPlan = useSetPlan()
   const deletePlan = useDeletePlan()
-  const { data: exercises } = useExercises()
 
+  // Every workout planned per day, in the order they were planned.
   const planByDate = useMemo(() => {
-    const map: Record<string, WorkoutKey> = {}
+    const map: Record<string, WorkoutKey[]> = {}
     for (const entry of planEntries ?? []) {
-      map[entry.date] = entry.workout_key
+      ;(map[entry.date] ??= []).push(entry.workout_key)
     }
     return map
   }, [planEntries])
 
+  const singleDay = !multiSelect && selectedDays.length === 1 ? selectedDays[0] : null
+  const { data: daySessions } = useSessionsOnDate(singleDay)
+  const workedOut = singleDay !== null && (daySessions?.items ?? []).some((s) => s.finished_at !== null)
+  const showPicker = !workedOut || addingAnother
+
   function toggleMultiSelect() {
     setMultiSelect((prev) => !prev)
     setSelectedDays([])
+    setAddingAnother(false)
   }
 
   function selectDay(iso: string) {
@@ -54,11 +62,16 @@ export function Plan() {
       setSelectedDays((prev) => (prev.includes(iso) ? prev.filter((d) => d !== iso) : [...prev, iso]))
     } else {
       setSelectedDays((prev) => (prev[0] === iso ? [] : [iso]))
+      setAddingAnother(false)
     }
   }
 
-  function pickWorkout(key: WorkoutKey) {
-    if (multiSelect) {
+  async function pickWorkout(key: WorkoutKey) {
+    if (addingAnother && singleDay) {
+      await setPlan.mutateAsync({ date: singleDay, workout_key: key, append: true })
+      setAddingAnother(false)
+      setSelectedDays([])
+    } else if (multiSelect) {
       assignToSelected(key)
     } else {
       setPendingPlan({ date: selectedDays[0], key })
@@ -91,15 +104,6 @@ export function Plan() {
     await Promise.all(removableDays.map((date) => deletePlan.mutateAsync(date)))
     setSelectedDays([])
   }
-
-  const previewKey = selectedDays.length === 1 ? planByDate[selectedDays[0]] : null
-  const previewExercises = useMemo(
-    () =>
-      previewKey && PREVIEWABLE_KEYS.includes(previewKey)
-        ? (exercises ?? []).filter((e) => e.category === previewKey).sort((a, b) => a.id - b.id)
-        : [],
-    [previewKey, exercises],
-  )
 
   return (
     <div className="flex flex-col gap-6">
@@ -136,8 +140,14 @@ export function Plan() {
               selected={selectedDays}
               onSelectDay={selectDay}
               renderDay={(iso) => {
-                const key = planByDate[iso]
-                return key ? <span className={`dot ${WORKOUT_DOT[key]}`} /> : null
+                const keys = planByDate[iso]
+                return keys ? (
+                  <span className="flex gap-0.5">
+                    {keys.map((key, i) => (
+                      <span key={i} className={`dot ${WORKOUT_DOT[key]}`} />
+                    ))}
+                  </span>
+                ) : null
               }}
             />
           </Card>
@@ -147,26 +157,40 @@ export function Plan() {
               {selectedDays.length === 0
                 ? 'No days selected'
                 : selectedDays.length === 1
-                  ? `${weekdayName(selectedDays[0])} · ${planByDate[selectedDays[0]] ? WORKOUT_LABELS[planByDate[selectedDays[0]]] : 'no workout assigned'}`
+                  ? `${weekdayName(selectedDays[0])} · ${planByDate[selectedDays[0]] ? planByDate[selectedDays[0]].map((k) => WORKOUT_LABELS[k]).join(' + ') : 'no workout assigned'}`
                   : `${selectedDays.length} days selected`}
             </p>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {WORKOUT_OPTIONS.map((key) => (
-                <button
-                  key={key}
-                  onClick={() => pickWorkout(key)}
-                  disabled={setPlan.isPending || selectedDays.length === 0}
-                  className={`tap-target press flex items-center justify-center gap-2 rounded-[var(--radius-control)] border-2 border-ink px-3 py-2 font-display text-[13px] font-extrabold uppercase tracking-[0.03em] shadow-[var(--shadow-pop)] disabled:opacity-40 disabled:shadow-none ${
-                    selectedDays.length === 1 && planByDate[selectedDays[0]] === key
-                      ? 'bg-highlight text-ink'
-                      : 'bg-surface text-ink'
-                  }`}
-                >
-                  <span className={`dot ${WORKOUT_DOT[key]}`} />
-                  {PICKER_LABEL[key] ?? WORKOUT_LABELS[key]}
-                </button>
-              ))}
-            </div>
+            {!showPicker && (
+              <div className="flex flex-col items-start gap-3">
+                <p className="headline text-[26px] leading-[1.02]">
+                  Good workout {singleDay === todayISO() ? 'today' : `on ${weekdayName(singleDay!)}`}.
+                  <br />
+                  Planning to do another one?
+                </p>
+                <Button size="md" onClick={() => setAddingAnother(true)}>
+                  Yes
+                </Button>
+              </div>
+            )}
+            {showPicker && (
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {WORKOUT_OPTIONS.map((key) => (
+                  <button
+                    key={key}
+                    onClick={() => pickWorkout(key)}
+                    disabled={setPlan.isPending || selectedDays.length === 0}
+                    className={`tap-target press flex items-center justify-center gap-2 rounded-[var(--radius-control)] border-2 border-ink px-3 py-2 font-display text-[13px] font-extrabold uppercase tracking-[0.03em] shadow-[var(--shadow-pop)] disabled:opacity-40 disabled:shadow-none ${
+                      !addingAnother && selectedDays.length === 1 && planByDate[selectedDays[0]]?.includes(key)
+                        ? 'bg-highlight text-ink'
+                        : 'bg-surface text-ink'
+                    }`}
+                  >
+                    <span className={`dot ${WORKOUT_DOT[key]}`} />
+                    {PICKER_LABEL[key] ?? WORKOUT_LABELS[key]}
+                  </button>
+                ))}
+              </div>
+            )}
             {removableDays.length > 0 && (
               <button
                 type="button"
@@ -179,28 +203,9 @@ export function Plan() {
             )}
           </Card>
 
-          {previewExercises.length > 0 && (
-            <section className="flex flex-col gap-2">
-              <h2 className="eyebrow">
-                {WORKOUT_LABELS[previewKey!]} exercises
-              </h2>
-              <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2">
-                {previewExercises.map((ex) => (
-                  <ExerciseCard
-                    key={ex.id}
-                    exerciseKey={ex.key}
-                    title={ex.name}
-                    subtitle={targetLabel(ex)}
-                    className="h-32 w-40 shrink-0 snap-start"
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-
           {pendingPlan && (
             <div
-              className="animate-overlay-in scrim fixed inset-0 z-50 flex items-center justify-center p-4"
+              className="animate-overlay-in scrim fixed inset-x-0 top-0 z-50 h-[var(--app-h)] flex items-center justify-center p-4"
               onClick={() => setPendingPlan(null)}
             >
               <div
@@ -209,11 +214,11 @@ export function Plan() {
               >
                 {(() => {
                   const existing = planByDate[pendingPlan.date]
-                  const changing = existing && existing !== pendingPlan.key
+                  const changing = existing && !(existing.length === 1 && existing[0] === pendingPlan.key)
                   return (
                     <p className="headline mb-4 text-[22px] leading-[1.02]">
                       {changing
-                        ? `${weekdayName(pendingPlan.date)}, ${pendingPlan.date.slice(5)} has already been planned with ${WORKOUT_LABELS[existing]}. Change to ${WORKOUT_LABELS[pendingPlan.key]}?`
+                        ? `${weekdayName(pendingPlan.date)}, ${pendingPlan.date.slice(5)} has already been planned with ${existing.map((k) => WORKOUT_LABELS[k]).join(' + ')}. Change to ${WORKOUT_LABELS[pendingPlan.key]}?`
                         : WORKOUT_LABELS[pendingPlan.key]}
                     </p>
                   )
