@@ -1076,8 +1076,9 @@ function SetLogDock({
 
   return (
     // Sticky inside <main> (the scroller), offset past the floating tab bar
-    // on phones; wide screens have no tab bar.
-    <div className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-10 md:bottom-4">
+    // on phones; wide screens have no tab bar. -mx-2 widens it from the
+    // page's 16px gutter to the tab bar's 8px inset, so the two line up.
+    <div className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-10 -mx-2 md:bottom-4 md:mx-0">
       <div className="sticker animate-dialog-in flex flex-col gap-1.5 rounded-[var(--radius-card)] bg-surface p-2.5 shadow-[var(--shadow-lg)]">
         <div className="flex items-center gap-2">
           <p className="min-w-0 flex-1 truncate font-display text-[13px] font-black uppercase leading-none text-ink">
