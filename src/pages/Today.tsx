@@ -548,90 +548,69 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
-function Stepper({
+const TICK_PX = 12 // matches the w-3 on each tick
+
+/** Number picker: a horizontal ruler of `step`-sized ticks that snaps under a
+ * fixed center line -- flick it for a big jump, nudge it for a small one. A
+ * value between ticks (22.5 kg from an older log) is kept as-is until the
+ * ruler moves. Long ticks every `majorEvery`, numbers every `labelEvery`. */
+function Ruler({
   label,
   value,
   step,
-  min = 0,
+  max,
+  majorEvery,
+  labelEvery,
   onChange,
 }: {
   label: string
   value: number
   step: number
-  min?: number
+  max: number
+  majorEvery: number
+  labelEvery: number
   onChange: (next: number) => void
 }) {
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <span className="eyebrow text-[11px] text-ink-tertiary">{label}</span>
-      <div className="flex items-center gap-0.5">
-        <button
-          type="button"
-          aria-label={`Decrease ${label}`}
-          onClick={() => onChange(Math.max(min, round1(value - step)))}
-          className="tap-target press flex items-center justify-center rounded-full border-2 border-ink bg-surface text-[20px] font-bold text-ink shadow-[var(--shadow-pop)] hover:bg-highlight"
-        >
-          −
-        </button>
-        <span className="w-14 text-center font-display text-[22px] font-black tabular-nums text-ink">{value}</span>
-        <button
-          type="button"
-          aria-label={`Increase ${label}`}
-          onClick={() => onChange(round1(value + step))}
-          className="tap-target press flex items-center justify-center rounded-full border-2 border-ink bg-surface text-[20px] font-bold text-ink shadow-[var(--shadow-pop)] hover:bg-highlight"
-        >
-          +
-        </button>
-      </div>
-    </div>
-  )
-}
-
-const TICK_PX = 12 // matches the w-3 on each tick
-const RULER_MAX_KG = 200
-
-/** Kg picker: a horizontal ruler of 1 kg ticks that snaps under a fixed
- * center line -- flick it for a big jump, nudge it for a small one. A value
- * between ticks (22.5 from an older log) is kept as-is until the ruler moves. */
-function KgRuler({ value, onChange }: { value: number; onChange: (next: number) => void }) {
   const ref = useRef<HTMLDivElement>(null)
   // The last value this ruler reported. Only a value from elsewhere (re-seeded
   // from the last set, arrow keys) moves the ruler; moving it for its own
   // reports would fight the finger mid-fling.
   const reported = useRef<number | null>(null)
+  const ticks = Math.floor(max / step)
+  const index = Math.round(value / step)
 
   useEffect(() => {
     if (value === reported.current || !ref.current) return
-    ref.current.scrollLeft = Math.round(value) * TICK_PX
-  }, [value])
+    ref.current.scrollLeft = Math.round(value / step) * TICK_PX
+  }, [value, step])
 
   function handleScroll() {
     if (!ref.current) return
-    const kg = Math.min(RULER_MAX_KG, Math.max(0, Math.round(ref.current.scrollLeft / TICK_PX)))
-    if (kg === Math.round(value)) return
-    reported.current = kg
-    onChange(kg)
+    const next = Math.min(ticks, Math.max(0, Math.round(ref.current.scrollLeft / TICK_PX)))
+    if (next === index) return
+    reported.current = round1(next * step)
+    onChange(reported.current)
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     const delta = { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1 }[e.key]
     if (delta === undefined) return
     e.preventDefault()
-    onChange(Math.min(RULER_MAX_KG, Math.max(0, Math.round(value) + delta)))
+    onChange(round1(Math.min(ticks, Math.max(0, index + delta)) * step))
   }
 
   return (
     <div className="flex basis-full flex-col items-center gap-1">
-      <span className="eyebrow text-[11px] text-ink-tertiary">Kg</span>
+      <span className="eyebrow text-[11px] text-ink-tertiary">{label}</span>
       <span className="font-display text-[28px] font-black tabular-nums text-ink">{round1(value)}</span>
       <div className="relative w-full">
         <div
           ref={ref}
           role="slider"
           tabIndex={0}
-          aria-label="Kg"
+          aria-label={label}
           aria-valuemin={0}
-          aria-valuemax={RULER_MAX_KG}
+          aria-valuemax={max}
           aria-valuenow={value}
           onScroll={handleScroll}
           onKeyDown={handleKeyDown}
@@ -639,14 +618,17 @@ function KgRuler({ value, onChange }: { value: number; onChange: (next: number) 
         >
           {/* Half-width spacers let 0 and the max reach the center line. */}
           <div className="shrink-0" style={{ width: `calc(50% - ${TICK_PX / 2}px)` }} />
-          {Array.from({ length: RULER_MAX_KG + 1 }, (_, kg) => (
-            <div key={kg} className="relative flex h-12 w-3 shrink-0 snap-center justify-center">
-              <span className={`w-0.5 rounded-full ${kg % 5 === 0 ? 'h-6 bg-ink' : 'h-3 bg-ink/35'}`} />
-              {kg % 10 === 0 && (
-                <span className="absolute bottom-0 text-[10px] font-semibold tabular-nums text-ink-tertiary">{kg}</span>
-              )}
-            </div>
-          ))}
+          {Array.from({ length: ticks + 1 }, (_, i) => {
+            const tick = round1(i * step)
+            return (
+              <div key={i} className="relative flex h-12 w-3 shrink-0 snap-center justify-center">
+                <span className={`w-0.5 rounded-full ${tick % majorEvery === 0 ? 'h-6 bg-ink' : 'h-3 bg-ink/35'}`} />
+                {tick % labelEvery === 0 && (
+                  <span className="absolute bottom-0 text-[10px] font-semibold tabular-nums text-ink-tertiary">{tick}</span>
+                )}
+              </div>
+            )
+          })}
           <div className="shrink-0" style={{ width: `calc(50% - ${TICK_PX / 2}px)` }} />
         </div>
         <div className="pointer-events-none absolute top-0 left-1/2 h-8 w-1 -translate-x-1/2 rounded-full bg-accent" />
@@ -891,19 +873,30 @@ function ExerciseLogCard({
       <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-4 p-4">
         {exercise.type === 'time' ? (
           inMinutes(exercise) ? (
-            <Stepper
+            <Ruler
               label="Minutes"
               value={Math.round(durationSec / 60)}
               step={1}
+              max={180}
+              majorEvery={5}
+              labelEvery={10}
               onChange={(minutes) => setDurationSec(minutes * 60)}
             />
           ) : (
-            <Stepper label="Seconds" value={durationSec} step={5} onChange={setDurationSec} />
+            <Ruler
+              label="Seconds"
+              value={durationSec}
+              step={5}
+              max={300}
+              majorEvery={15}
+              labelEvery={30}
+              onChange={setDurationSec}
+            />
           )
         ) : (
           <>
-            <KgRuler value={weight} onChange={setWeight} />
-            <Stepper label="Reps" value={reps} step={1} onChange={setReps} />
+            <Ruler label="Kg" value={weight} step={1} max={200} majorEvery={5} labelEvery={10} onChange={setWeight} />
+            <Ruler label="Reps" value={reps} step={1} max={50} majorEvery={5} labelEvery={5} onChange={setReps} />
           </>
         )}
       </div>
