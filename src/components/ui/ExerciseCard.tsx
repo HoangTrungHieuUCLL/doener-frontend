@@ -23,7 +23,7 @@ export function ExerciseCard({
 }) {
   return (
     <div
-      className={`relative overflow-hidden bg-ink ${framed ? 'rounded-[var(--radius-card)] border border-white/20 shadow-[var(--shadow-glass)]' : ''} ${className}`}
+      className={`relative flex flex-col overflow-hidden bg-ink ${framed ? 'rounded-[var(--radius-card)] border border-white/20 shadow-[var(--shadow-glass)]' : ''} ${className}`}
     >
       <img
         src={exerciseImageUrl(exerciseKey)}
@@ -37,7 +37,7 @@ export function ExerciseCard({
           {chip}
         </span>
       )}
-      <div className="relative flex h-full flex-col justify-end gap-0.5 p-4">
+      <div className="relative flex flex-1 flex-col justify-end gap-0.5 p-4">
         <h3 className="font-display text-[19px] font-black uppercase leading-none text-white">{title}</h3>
         {subtitle && <p className="mt-1 text-[13px] font-medium text-white/85">{subtitle}</p>}
         {children}

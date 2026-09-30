@@ -550,8 +550,9 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 const TICK_PX = 12 // matches the w-3 on each tick
 
-/** Number picker: a horizontal ruler of `step`-sized ticks that snaps under a
- * fixed center line -- flick it for a big jump, nudge it for a small one. A
+/** Number picker: a vertical ruler of `step`-sized ticks that snaps to a
+ * fixed center line -- flick it for a big jump, nudge it for a small one.
+ * Values grow downward, so swiping up raises the number (like an iOS picker). A
  * value between ticks (22.5 kg from an older log) is kept as-is until the
  * ruler moves. Long ticks every `majorEvery`, numbers every `labelEvery`. */
 function Ruler({
@@ -581,12 +582,12 @@ function Ruler({
 
   useEffect(() => {
     if (value === reported.current || !ref.current) return
-    ref.current.scrollLeft = Math.round(value / step) * TICK_PX
+    ref.current.scrollTop = Math.round(value / step) * TICK_PX
   }, [value, step])
 
   function handleScroll() {
     if (!ref.current) return
-    const next = Math.min(ticks, Math.max(0, Math.round(ref.current.scrollLeft / TICK_PX)))
+    const next = Math.min(ticks, Math.max(0, Math.round(ref.current.scrollTop / TICK_PX)))
     if (next === index) return
     reported.current = round1(next * step)
     onChange(reported.current)
@@ -600,38 +601,41 @@ function Ruler({
   }
 
   return (
-    <div className="flex basis-full flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-1">
       <span className="eyebrow text-[11px] text-ink-tertiary">{label}</span>
-      <span className="font-display text-[28px] font-black tabular-nums text-ink">{round1(value)}</span>
-      <div className="relative w-full">
-        <div
-          ref={ref}
-          role="slider"
-          tabIndex={0}
-          aria-label={label}
-          aria-valuemin={0}
-          aria-valuemax={max}
-          aria-valuenow={value}
-          onScroll={handleScroll}
-          onKeyDown={handleKeyDown}
-          className="flex snap-x snap-mandatory overflow-x-auto rounded-[var(--radius-control)] outline-offset-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
-          {/* Half-width spacers let 0 and the max reach the center line. */}
-          <div className="shrink-0" style={{ width: `calc(50% - ${TICK_PX / 2}px)` }} />
-          {Array.from({ length: ticks + 1 }, (_, i) => {
-            const tick = round1(i * step)
-            return (
-              <div key={i} className="relative flex h-12 w-3 shrink-0 snap-center justify-center">
-                <span className={`w-0.5 rounded-full ${tick % majorEvery === 0 ? 'h-6 bg-ink' : 'h-3 bg-ink/35'}`} />
-                {tick % labelEvery === 0 && (
-                  <span className="absolute bottom-0 text-[10px] font-semibold tabular-nums text-ink-tertiary">{tick}</span>
-                )}
-              </div>
-            )
-          })}
-          <div className="shrink-0" style={{ width: `calc(50% - ${TICK_PX / 2}px)` }} />
+      <div className="flex items-center gap-2">
+        <span className="w-16 text-right font-display text-[28px] font-black tabular-nums text-ink">{round1(value)}</span>
+        <div className="relative h-36 w-14">
+          <div
+            ref={ref}
+            role="slider"
+            tabIndex={0}
+            aria-label={label}
+            aria-orientation="vertical"
+            aria-valuemin={0}
+            aria-valuemax={max}
+            aria-valuenow={value}
+            onScroll={handleScroll}
+            onKeyDown={handleKeyDown}
+            className="flex h-full snap-y snap-mandatory flex-col overflow-y-auto overscroll-contain rounded-[var(--radius-control)] outline-offset-2 [mask-image:linear-gradient(transparent,black_25%,black_75%,transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {/* Half-height spacers let 0 and the max reach the center line. */}
+            <div className="shrink-0" style={{ height: `calc(50% - ${TICK_PX / 2}px)` }} />
+            {Array.from({ length: ticks + 1 }, (_, i) => {
+              const tick = round1(i * step)
+              return (
+                <div key={i} className="relative flex h-3 w-full shrink-0 snap-center items-center">
+                  <span className={`h-0.5 rounded-full ${tick % majorEvery === 0 ? 'w-6 bg-ink' : 'w-3 bg-ink/35'}`} />
+                  {tick % labelEvery === 0 && (
+                    <span className="absolute left-8 text-[10px] font-semibold tabular-nums text-ink-tertiary">{tick}</span>
+                  )}
+                </div>
+              )
+            })}
+            <div className="shrink-0" style={{ height: `calc(50% - ${TICK_PX / 2}px)` }} />
+          </div>
+          <div className="pointer-events-none absolute top-1/2 left-0 h-1 w-6 -translate-y-1/2 rounded-full bg-accent" />
         </div>
-        <div className="pointer-events-none absolute top-0 left-1/2 h-8 w-1 -translate-x-1/2 rounded-full bg-accent" />
       </div>
     </div>
   )
@@ -694,7 +698,7 @@ function LastResult({
     .filter((v): v is number => v !== null)
 
   return (
-    <details className="group border-b-2 border-ink/10 px-4 py-3">
+    <details className="group mt-3 rounded-[var(--radius-control)] bg-surface/90 px-3 py-2.5 backdrop-blur-sm">
       <summary className="flex cursor-pointer list-none items-center gap-3 [&::-webkit-details-marker]:hidden">
         <div className="min-w-0 flex-1">
           <p className="eyebrow text-[11px] text-ink-tertiary">
@@ -860,17 +864,20 @@ function ExerciseLogCard({
         title={exercise.name}
         subtitle={`${setCount} set${setCount === 1 ? '' : 's'} logged · ${targetLabel(exercise)}${exercise.per_side ? ' per side' : ''}`}
         chip={isNewPr ? 'New PR!' : targetLabel(exercise)}
-        className="h-[40vh] border-b-2 border-ink"
-      />
+        className="min-h-[40vh] border-b-2 border-ink"
+      >
+        {/* Sits on the photo, under the name and target. min-h (not h) on the
+            card so opening the set breakdown grows the photo instead of
+            clipping the panel. */}
+        <LastResult
+          exercise={exercise}
+          lastSet={lastSet}
+          best={best}
+          thisSessionSets={loggedSets}
+        />
+      </ExerciseCard>
 
-      <LastResult
-        exercise={exercise}
-        lastSet={lastSet}
-        best={best}
-        thisSessionSets={loggedSets}
-      />
-
-      <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-4 p-4">
+      <div className="flex items-start justify-center gap-6 p-4">
         {exercise.type === 'time' ? (
           inMinutes(exercise) ? (
             <Ruler
