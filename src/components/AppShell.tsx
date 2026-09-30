@@ -85,7 +85,14 @@ export function AppShell() {
         </header>
 
         <main className="flex-1 overflow-y-auto pb-28 md:pb-8">
-          <div key={location.pathname} className="animate-page-in mx-auto w-full max-w-3xl px-4 py-6 md:px-8 md:py-10">
+          {/* The Workout catalog is a photo grid, so it spreads to the full width;
+              every other page keeps a readable column. */}
+          <div
+            key={location.pathname}
+            className={`animate-page-in mx-auto w-full px-4 py-6 md:px-8 md:py-10 ${
+              location.pathname === '/workout' ? '' : 'max-w-3xl'
+            }`}
+          >
             <Outlet />
           </div>
         </main>

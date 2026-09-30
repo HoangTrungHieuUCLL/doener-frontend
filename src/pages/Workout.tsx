@@ -59,7 +59,7 @@ export function Workout() {
         <p className="mt-2 text-[15px] text-ink-secondary">Every exercise, how to do it, and what to watch for.</p>
       </header>
 
-      <details className="sticker group flex flex-col gap-4 rounded-[var(--radius-card)] bg-highlight-soft p-4">
+      <details className="sticker group flex max-w-3xl flex-col gap-4 rounded-[var(--radius-card)] bg-highlight-soft p-4">
         <summary className="headline flex cursor-pointer list-none items-center justify-between gap-2 text-[26px] [&::-webkit-details-marker]:hidden">
           <span>How this plan <span className="marker">works</span></span>
           <svg
@@ -94,7 +94,7 @@ export function Workout() {
           return (
             <section key={key} className="flex flex-col gap-3">
               <h2 className="eyebrow text-[18px]">{label}</h2>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-[repeat(auto-fill,minmax(14rem,1fr))]">
                 {items.map((ex) => {
                   const expanded = expandedId === ex.id
                   return (
@@ -115,7 +115,7 @@ export function Workout() {
                 })}
               </div>
               {expandedEx && guide && (
-                <div className="sticker animate-page-in flex flex-col gap-3 rounded-[var(--radius-card)] bg-surface p-4">
+                <div className="sticker animate-page-in flex max-w-3xl flex-col gap-3 rounded-[var(--radius-card)] bg-surface p-4">
                   <p className="headline text-[22px] leading-[1.02]">{expandedEx.name}</p>
                   <div>
                     <p className="eyebrow mb-1.5 text-[12px]">How to</p>
