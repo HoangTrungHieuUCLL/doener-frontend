@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import type { FormEvent, ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { FormEvent, KeyboardEvent, ReactNode } from 'react'
 import { useExercises } from '../api/hooks/useExercises'
 import { usePlan } from '../api/hooks/usePlan'
 import { useLastSets, usePrStats } from '../api/hooks/useStats'
@@ -30,7 +30,7 @@ import { Sparkline } from '../components/ui/Sparkline'
 import { formatRelativeDay, todayISO } from '../lib/date'
 import { formatDuration, useCountdown, usePausableStopwatch } from '../lib/useStopwatch'
 import { useLocalStorageState } from '../lib/useLocalStorageState'
-import { CATALOG_SECTIONS, WORKOUT_LABELS, targetLabel } from '../lib/workouts'
+import { CATALOG_SECTIONS, WORKOUT_LABELS, formatTimed, inMinutes, targetLabel } from '../lib/workouts'
 import { buildSessionQueue } from '../lib/sessionQueue'
 import type { AddedExercise } from '../lib/sessionQueue'
 
@@ -587,16 +587,84 @@ function Stepper({
   )
 }
 
+const TICK_PX = 12 // matches the w-3 on each tick
+const RULER_MAX_KG = 200
+
+/** Kg picker: a horizontal ruler of 1 kg ticks that snaps under a fixed
+ * center line -- flick it for a big jump, nudge it for a small one. A value
+ * between ticks (22.5 from an older log) is kept as-is until the ruler moves. */
+function KgRuler({ value, onChange }: { value: number; onChange: (next: number) => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+  // The last value this ruler reported. Only a value from elsewhere (re-seeded
+  // from the last set, arrow keys) moves the ruler; moving it for its own
+  // reports would fight the finger mid-fling.
+  const reported = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (value === reported.current || !ref.current) return
+    ref.current.scrollLeft = Math.round(value) * TICK_PX
+  }, [value])
+
+  function handleScroll() {
+    if (!ref.current) return
+    const kg = Math.min(RULER_MAX_KG, Math.max(0, Math.round(ref.current.scrollLeft / TICK_PX)))
+    if (kg === Math.round(value)) return
+    reported.current = kg
+    onChange(kg)
+  }
+
+  function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    const delta = { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1 }[e.key]
+    if (delta === undefined) return
+    e.preventDefault()
+    onChange(Math.min(RULER_MAX_KG, Math.max(0, Math.round(value) + delta)))
+  }
+
+  return (
+    <div className="flex basis-full flex-col items-center gap-1">
+      <span className="eyebrow text-[11px] text-ink-tertiary">Kg</span>
+      <span className="font-display text-[28px] font-black tabular-nums text-ink">{round1(value)}</span>
+      <div className="relative w-full">
+        <div
+          ref={ref}
+          role="slider"
+          tabIndex={0}
+          aria-label="Kg"
+          aria-valuemin={0}
+          aria-valuemax={RULER_MAX_KG}
+          aria-valuenow={value}
+          onScroll={handleScroll}
+          onKeyDown={handleKeyDown}
+          className="flex snap-x snap-mandatory overflow-x-auto rounded-[var(--radius-control)] outline-offset-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {/* Half-width spacers let 0 and the max reach the center line. */}
+          <div className="shrink-0" style={{ width: `calc(50% - ${TICK_PX / 2}px)` }} />
+          {Array.from({ length: RULER_MAX_KG + 1 }, (_, kg) => (
+            <div key={kg} className="relative flex h-12 w-3 shrink-0 snap-center justify-center">
+              <span className={`w-0.5 rounded-full ${kg % 5 === 0 ? 'h-6 bg-ink' : 'h-3 bg-ink/35'}`} />
+              {kg % 10 === 0 && (
+                <span className="absolute bottom-0 text-[10px] font-semibold tabular-nums text-ink-tertiary">{kg}</span>
+              )}
+            </div>
+          ))}
+          <div className="shrink-0" style={{ width: `calc(50% - ${TICK_PX / 2}px)` }} />
+        </div>
+        <div className="pointer-events-none absolute top-0 left-1/2 h-8 w-1 -translate-x-1/2 rounded-full bg-accent" />
+      </div>
+    </div>
+  )
+}
+
 function round1(n: number): number {
   return Math.round(n * 10) / 10
 }
 
 type SetShape = { weight_kg: number | null; reps: number | null; duration_sec: number | null }
 
-/** "40 kg x 10" for weighted work, "45s" for timed work. */
+/** "40 kg x 10" for weighted work, "45s" or "20 min" for timed work. */
 function describeSet(exercise: Exercise, set: SetShape): string {
   if (exercise.type === 'time') {
-    return set.duration_sec === null ? '—' : `${set.duration_sec}s`
+    return set.duration_sec === null ? '—' : formatTimed(exercise, set.duration_sec)
   }
   const parts: string[] = []
   if (set.weight_kg !== null) parts.push(`${round1(set.weight_kg)} kg`)
@@ -762,7 +830,7 @@ function ExerciseLogCard({
   onLogged: (isNewPr: boolean) => void
 }) {
   const logSet = useLogSet()
-  const [weight, setWeight] = useState(lastSet?.weight_kg ?? 20)
+  const [weight, setWeight] = useState(lastSet?.weight_kg ?? (exercise.equipment === 'bodyweight' ? 0 : 20))
   const [reps, setReps] = useState(lastSet?.reps ?? exercise.reps ?? 10)
   const [durationSec, setDurationSec] = useState(lastSet?.duration_sec ?? exercise.duration_sec ?? 30)
 
@@ -822,10 +890,19 @@ function ExerciseLogCard({
 
       <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-4 p-4">
         {exercise.type === 'time' ? (
-          <Stepper label="Seconds" value={durationSec} step={5} onChange={setDurationSec} />
+          inMinutes(exercise) ? (
+            <Stepper
+              label="Minutes"
+              value={Math.round(durationSec / 60)}
+              step={1}
+              onChange={(minutes) => setDurationSec(minutes * 60)}
+            />
+          ) : (
+            <Stepper label="Seconds" value={durationSec} step={5} onChange={setDurationSec} />
+          )
         ) : (
           <>
-            <Stepper label="Kg" value={weight} step={2.5} onChange={setWeight} />
+            <KgRuler value={weight} onChange={setWeight} />
             <Stepper label="Reps" value={reps} step={1} onChange={setReps} />
           </>
         )}

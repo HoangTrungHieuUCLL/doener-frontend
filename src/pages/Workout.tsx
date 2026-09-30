@@ -3,7 +3,7 @@ import { useExercises } from '../api/hooks/useExercises'
 import type { Exercise } from '../api/types'
 import { ExerciseCard } from '../components/ui/ExerciseCard'
 import { EXERCISE_GUIDES } from '../lib/exerciseGuides'
-import { targetLabel, WORKOUT_LABELS } from '../lib/workouts'
+import { loggingLabel, targetLabel, WORKOUT_LABELS } from '../lib/workouts'
 
 const PRINCIPLES: { title: string; body: string }[] = [
   {
@@ -124,6 +124,10 @@ export function Workout() {
                         <li key={i}>{step}</li>
                       ))}
                     </ol>
+                  </div>
+                  <div>
+                    <p className="eyebrow mb-1.5 text-[12px]">How it's logged</p>
+                    <p className="text-[14px] text-ink">{loggingLabel(expandedEx)}</p>
                   </div>
                   <div className="rounded-[var(--radius-control)] border-2 border-ink bg-negative-soft p-3">
                     <p className="eyebrow mb-0.5 text-[12px] text-negative-text">Watch out for</p>
