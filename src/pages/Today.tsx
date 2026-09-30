@@ -223,6 +223,14 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
     [],
   )
   const [picking, setPicking] = useState(false)
+  const [listFilter, setListFilter] = useState<'remaining' | 'all'>('remaining')
+  // The exercise tapped in list mode (or picked in a custom workout): the one
+  // the set logger at the bottom logs against. Null hides the logger.
+  const [selectedId, setSelectedId] = useState<number | null>(null)
+  // Focus mode: an exercise chosen out of order via "Do another exercise".
+  // Falls back to the queue's own order once it has all its sets.
+  const [focusId, setFocusId] = useState<number | null>(null)
+  const [switching, setSwitching] = useState(false)
 
   async function handleReset() {
     await finishSession.mutateAsync({ sessionId, duration_sec: activeSec })
@@ -296,14 +304,30 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
     await finishSession.mutateAsync({ sessionId, duration_sec: activeSec })
   }
 
-  const currentExercise = currentIndex < queue.length ? queue[currentIndex] : null
+  const setsDone = (id: number) => loggedSets.filter((s) => s.exercise_id === id).length
+  const isComplete = (ex: Exercise) => setsDone(ex.id) >= ex.sets
+
+  const chosen = focusId === null ? undefined : queue.find((e) => e.id === focusId)
+  const focusExercise =
+    chosen && !isComplete(chosen) ? chosen : currentIndex < queue.length ? queue[currentIndex] : null
+  const otherRemaining = queue.filter((e) => !isComplete(e) && e.id !== focusExercise?.id)
+
+  // What the set logger at the bottom is logging against, if anything.
+  const logTarget =
+    workoutKey === 'cardio'
+      ? null
+      : workoutKey === 'custom'
+        ? (exercises.find((e) => e.id === selectedId) ?? null)
+        : viewMode === 'focus'
+          ? focusExercise
+          : (queue.find((e) => e.id === selectedId) ?? null)
 
   function handleAddExercise(exerciseId: number, placement: Placement) {
     setAdded((prev) => [
       ...prev,
       {
         exerciseId,
-        afterExerciseId: placement === 'next' ? (currentExercise?.id ?? null) : null,
+        afterExerciseId: placement === 'next' ? (focusExercise?.id ?? null) : null,
       },
     ])
     setPicking(false)
@@ -312,7 +336,28 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
   // Only removable until it has sets: once logged, it is part of the record.
   function handleRemoveAdded(exerciseId: number) {
     setAdded((prev) => prev.filter((a) => a.exerciseId !== exerciseId))
+    if (selectedId === exerciseId) setSelectedId(null)
   }
+
+  const shown = (list: Exercise[]) => (listFilter === 'all' ? list : list.filter((e) => !isComplete(e)))
+  const statusCard = (ex: Exercise, props?: { selectable?: boolean }) => (
+    <ExerciseStatusCard
+      key={ex.id}
+      exercise={ex}
+      loggedSets={loggedSets.filter((s) => s.exercise_id === ex.id)}
+      lastSet={lastSetByExercise[ex.id] ?? null}
+      best={bestByExercise[ex.id] ?? null}
+      isNewPr={Boolean(newPrIds[ex.id])}
+      selected={props?.selectable ? selectedId === ex.id : undefined}
+      onSelect={props?.selectable ? () => setSelectedId(selectedId === ex.id ? null : ex.id) : undefined}
+    />
+  )
+
+  const listSections: { title: string; items: Exercise[] }[] = [
+    { title: 'Warm-up', items: shown(warmupExercises) },
+    { title: WORKOUT_LABELS[workoutKey], items: shown(mainExercises) },
+    { title: 'Added this session', items: shown(extraExercises) },
+  ].filter((section) => section.items.length > 0)
 
   return (
     <div className="flex flex-col gap-6 pb-6">
@@ -371,20 +416,14 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
       )}
 
       {workoutKey !== 'cardio' && workoutKey !== 'custom' && (
-        <div className="flex gap-1 rounded-full border-2 border-ink bg-surface p-1">
-          {(['focus', 'list'] as const).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              onClick={() => setViewMode(mode)}
-              className={`tap-target flex-1 rounded-full font-display text-[13px] font-extrabold uppercase tracking-[0.05em] transition-colors ${
-                viewMode === mode ? 'bg-ink text-bg' : 'text-ink-tertiary hover:text-ink'
-              }`}
-            >
-              {mode}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          options={[
+            { value: 'focus', label: 'Focus' },
+            { value: 'list', label: 'List' },
+          ]}
+          value={viewMode}
+          onChange={setViewMode}
+        />
       )}
 
       {restTimer && (
@@ -402,109 +441,84 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
       ) : workoutKey === 'custom' ? (
         <CustomExercisePicker
           exercises={exercises}
-          sessionId={sessionId}
           loggedSets={loggedSets}
-          lastSetByExercise={lastSetByExercise}
-          bestByExercise={bestByExercise}
-          newPrIds={newPrIds}
-          onLogged={(exerciseId, restSec, isNewPr) => handleSetLogged(exerciseId, restSec, false, isNewPr)}
+          pickedId={selectedId}
+          onPick={setSelectedId}
+          renderCard={(ex) => statusCard(ex)}
         />
       ) : viewMode === 'list' ? (
         <>
-          {warmupExercises.length > 0 && (
-            <Section title="Warm-up">
-              {warmupExercises.map((ex) => (
-                <ExerciseLogCard
-                  key={ex.id}
-                  exercise={ex}
-                  sessionId={sessionId}
-                  loggedSets={loggedSets.filter((s) => s.exercise_id === ex.id)}
-                  lastSet={lastSetByExercise[ex.id] ?? null}
-                  best={bestByExercise[ex.id] ?? null}
-                  isNewPr={Boolean(newPrIds[ex.id])}
-                  onLogged={(isNewPr) => handleSetLogged(ex.id, ex.rest_sec, true, isNewPr)}
-                />
-              ))}
-            </Section>
-          )}
-          {mainExercises.length > 0 && (
-            <Section title={WORKOUT_LABELS[workoutKey]}>
-              {mainExercises.map((ex) => (
-                <ExerciseLogCard
-                  key={ex.id}
-                  exercise={ex}
-                  sessionId={sessionId}
-                  loggedSets={loggedSets.filter((s) => s.exercise_id === ex.id)}
-                  lastSet={lastSetByExercise[ex.id] ?? null}
-                  best={bestByExercise[ex.id] ?? null}
-                  isNewPr={Boolean(newPrIds[ex.id])}
-                  onLogged={(isNewPr) => handleSetLogged(ex.id, ex.rest_sec, false, isNewPr)}
-                />
-              ))}
-            </Section>
-          )}
-          {extraExercises.length > 0 && (
-            <Section title="Added this session">
-              {extraExercises.map((ex) => (
-                <div key={ex.id} className="flex flex-col gap-2">
-                  <ExerciseLogCard
-                    exercise={ex}
-                    sessionId={sessionId}
-                    loggedSets={loggedSets.filter((s) => s.exercise_id === ex.id)}
-                    lastSet={lastSetByExercise[ex.id] ?? null}
-                    best={bestByExercise[ex.id] ?? null}
-                    isNewPr={Boolean(newPrIds[ex.id])}
-                    onLogged={(isNewPr) => handleSetLogged(ex.id, ex.rest_sec, false, isNewPr)}
-                  />
-                  <RemoveAddedButton
-                    exercise={ex}
-                    logged={loggedSets.some((s) => s.exercise_id === ex.id)}
-                    onRemove={() => handleRemoveAdded(ex.id)}
-                  />
-                </div>
-              ))}
-            </Section>
+          <SegmentedControl
+            size="sm"
+            options={[
+              { value: 'remaining', label: 'Remaining exercises' },
+              { value: 'all', label: 'All exercises' },
+            ]}
+            value={listFilter}
+            onChange={setListFilter}
+          />
+          {listSections.length === 0 ? (
+            <p className="headline py-6 text-center text-[28px]">All exercises done — ready to finish.</p>
+          ) : (
+            listSections.map(({ title, items }) => (
+              <Section key={title} title={title}>
+                {items.map((ex) =>
+                  addedIds.has(ex.id) ? (
+                    <div key={ex.id} className="flex flex-col gap-2">
+                      {statusCard(ex, { selectable: true })}
+                      <RemoveAddedButton
+                        exercise={ex}
+                        logged={loggedSets.some((s) => s.exercise_id === ex.id)}
+                        onRemove={() => handleRemoveAdded(ex.id)}
+                      />
+                    </div>
+                  ) : (
+                    statusCard(ex, { selectable: true })
+                  ),
+                )}
+              </Section>
+            ))
           )}
         </>
-      ) : currentIndex < queue.length ? (
+      ) : focusExercise ? (
         <section className="flex flex-col gap-3">
           <div className="eyebrow flex items-center justify-between text-[12px]">
             <span>
-              {warmupIds.has(queue[currentIndex].id)
+              {warmupIds.has(focusExercise.id)
                 ? 'Warm-up'
-                : addedIds.has(queue[currentIndex].id)
+                : addedIds.has(focusExercise.id)
                   ? 'Added'
                   : WORKOUT_LABELS[workoutKey]}
             </span>
             <span>
-              {currentIndex + 1} of {queue.length}
+              {queue.indexOf(focusExercise) + 1} of {queue.length}
             </span>
           </div>
           <div className="h-3.5 w-full overflow-hidden rounded-full border-2 border-ink bg-surface">
             <div
               className="h-full border-r-2 border-ink bg-accent transition-all"
-              style={{ width: `${((currentIndex + 1) / queue.length) * 100}%` }}
+              style={{ width: `${((queue.indexOf(focusExercise) + 1) / queue.length) * 100}%` }}
             />
           </div>
-          <ExerciseLogCard
-            key={queue[currentIndex].id}
-            exercise={queue[currentIndex]}
-            sessionId={sessionId}
-            loggedSets={loggedSets.filter((s) => s.exercise_id === queue[currentIndex].id)}
-            lastSet={lastSetByExercise[queue[currentIndex].id] ?? null}
-            best={bestByExercise[queue[currentIndex].id] ?? null}
-            isNewPr={Boolean(newPrIds[queue[currentIndex].id])}
-            onLogged={(isNewPr) =>
-              handleSetLogged(queue[currentIndex].id, queue[currentIndex].rest_sec, warmupIds.has(queue[currentIndex].id), isNewPr)
-            }
-          />
-          {addedIds.has(queue[currentIndex].id) && (
-            <RemoveAddedButton
-              exercise={queue[currentIndex]}
-              logged={loggedSets.some((s) => s.exercise_id === queue[currentIndex].id)}
-              onRemove={() => handleRemoveAdded(queue[currentIndex].id)}
-            />
-          )}
+          {statusCard(focusExercise)}
+          <div className="flex flex-wrap justify-center gap-2">
+            {otherRemaining.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setSwitching(true)}
+                className="press rounded-full border-2 border-ink bg-surface px-3 py-1.5 font-display text-[12px] font-extrabold uppercase tracking-[0.03em] text-ink shadow-[var(--shadow-pop)]"
+              >
+                Do another exercise
+              </button>
+            )}
+            {addedIds.has(focusExercise.id) && (
+              <RemoveAddedButton
+                exercise={focusExercise}
+                logged={loggedSets.some((s) => s.exercise_id === focusExercise.id)}
+                onRemove={() => handleRemoveAdded(focusExercise.id)}
+              />
+            )}
+          </div>
         </section>
       ) : (
         <p className="headline py-6 text-center text-[28px]">
@@ -512,25 +526,152 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
         </p>
       )}
 
-      {workoutKey !== 'cardio' && workoutKey !== 'custom' && (
-        <Button variant="secondary" size="md" onClick={() => setPicking(true)}>
-          + Add an exercise
-        </Button>
+      {switching && (
+        <SwitchExerciseSheet
+          exercises={otherRemaining}
+          setsDone={setsDone}
+          onPick={(id) => {
+            setFocusId(id)
+            setSwitching(false)
+          }}
+          onClose={() => setSwitching(false)}
+        />
       )}
 
       {picking && (
         <AddExerciseSheet
           exercises={exercises}
           inQueueIds={queueIds}
-          currentExerciseName={currentExercise?.name ?? null}
+          currentExerciseName={focusExercise?.name ?? null}
           onAdd={handleAddExercise}
           onClose={() => setPicking(false)}
         />
       )}
 
-      <Button size="lg" variant="primary" onClick={handleFinish} disabled={finishSession.isPending}>
-        {finishSession.isPending ? 'Finishing…' : 'Finish workout'}
-      </Button>
+      {/* Same frame, corners and height as the exercise cards above. */}
+      <div className="flex gap-3">
+        {workoutKey !== 'cardio' && workoutKey !== 'custom' && (
+          <button
+            type="button"
+            onClick={() => setPicking(true)}
+            className="sticker press h-14 flex-1 rounded-[var(--radius-card)] bg-surface font-display text-[14px] font-extrabold uppercase tracking-[0.03em] text-ink"
+          >
+            + Add an exercise
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={handleFinish}
+          disabled={finishSession.isPending}
+          className="sticker press h-14 flex-1 rounded-[var(--radius-card)] bg-accent font-display text-[14px] font-extrabold uppercase tracking-[0.03em] text-white disabled:opacity-40"
+        >
+          {finishSession.isPending ? 'Finishing…' : 'Finish workout'}
+        </button>
+      </div>
+
+      {logTarget && (
+        <SetLogDock
+          key={logTarget.id}
+          exercise={logTarget}
+          sessionId={sessionId}
+          setCount={setsDone(logTarget.id)}
+          lastSet={lastSetByExercise[logTarget.id] ?? null}
+          onLogged={(isNewPr) =>
+            handleSetLogged(logTarget.id, logTarget.rest_sec, warmupIds.has(logTarget.id), isNewPr)
+          }
+          onClose={viewMode === 'focus' && workoutKey !== 'custom' ? undefined : () => setSelectedId(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+/** Two-or-more-way pill toggle (Focus / List, Remaining / All). */
+function SegmentedControl<T extends string>({
+  options,
+  value,
+  onChange,
+  size = 'md',
+}: {
+  options: { value: T; label: string }[]
+  value: T
+  onChange: (next: T) => void
+  size?: 'md' | 'sm'
+}) {
+  return (
+    <div className="flex gap-1 rounded-full border-2 border-ink bg-surface p-1">
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          onClick={() => onChange(option.value)}
+          aria-pressed={value === option.value}
+          className={`tap-target flex-1 rounded-full font-display font-extrabold uppercase tracking-[0.05em] transition-colors ${
+            size === 'sm' ? 'text-[11px]' : 'text-[13px]'
+          } ${value === option.value ? 'bg-ink text-bg' : 'text-ink-tertiary hover:text-ink'}`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** Focus mode: jump to any exercise still left in the list, out of order. */
+function SwitchExerciseSheet({
+  exercises,
+  setsDone,
+  onPick,
+  onClose,
+}: {
+  exercises: Exercise[]
+  setsDone: (exerciseId: number) => number
+  onPick: (exerciseId: number) => void
+  onClose: () => void
+}) {
+  return (
+    <div
+      className="animate-overlay-in scrim fixed inset-x-0 top-0 z-50 flex h-[var(--app-h)] items-end justify-center sm:items-center"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Do another exercise"
+        className="animate-dialog-in flex max-h-[85%] w-full max-w-md flex-col rounded-t-[var(--radius-card)] border-2 border-ink bg-bg shadow-[var(--shadow-lg)] sm:rounded-[var(--radius-card)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="flex items-center justify-between gap-3 border-b-2 border-ink/10 p-4">
+          <p className="headline text-[26px]">
+            Do <span className="marker">another</span>
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="tap-target press flex shrink-0 items-center justify-center rounded-full border-2 border-ink bg-surface text-ink shadow-[var(--shadow-pop)]"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+              <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+            </svg>
+          </button>
+        </header>
+        <div className="grid grid-cols-2 gap-3 overflow-y-auto p-4">
+          {exercises.map((ex) => {
+            const done = setsDone(ex.id)
+            return (
+              <button key={ex.id} type="button" onClick={() => onPick(ex.id)} className="press text-left">
+                <ExerciseCard
+                  exerciseKey={ex.key}
+                  title={ex.name}
+                  subtitle={done > 0 ? `${done} of ${ex.sets} sets done` : targetLabel(ex)}
+                  className="aspect-[4/3]"
+                />
+              </button>
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }
@@ -620,41 +761,41 @@ function Ruler({
   }
 
   return (
-    <div className="flex flex-col items-center gap-1">
-      <span className="eyebrow text-[11px] text-ink-tertiary">{label}</span>
-      <div className="flex items-center gap-2">
-        <span className="w-16 text-right font-display text-[28px] font-black tabular-nums text-ink">{round1(value)}</span>
-        <div className="relative h-36 w-14">
-          <div
-            ref={ref}
-            role="slider"
-            tabIndex={0}
-            aria-label={label}
-            aria-orientation="vertical"
-            aria-valuemin={0}
-            aria-valuemax={max}
-            aria-valuenow={value}
-            onScroll={handleScroll}
-            onKeyDown={handleKeyDown}
-            className="flex h-full snap-y snap-mandatory flex-col overflow-y-auto overscroll-contain rounded-[var(--radius-control)] outline-offset-2 [mask-image:linear-gradient(transparent,black_25%,black_75%,transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          >
-            {/* Half-height spacers let 0 and the max reach the center line. */}
-            <div className="shrink-0" style={{ height: `calc(50% - ${TICK_PX / 2}px)` }} />
-            {Array.from({ length: ticks + 1 }, (_, i) => {
-              const tick = round1(i * step)
-              return (
-                <div key={i} className="relative flex h-3 w-full shrink-0 snap-center items-center">
-                  <span className={`h-0.5 rounded-full ${tick % majorEvery === 0 ? 'w-6 bg-ink' : 'w-3 bg-ink/35'}`} />
-                  {tick % labelEvery === 0 && (
-                    <span className="absolute left-8 text-[10px] font-semibold tabular-nums text-ink-tertiary">{tick}</span>
-                  )}
-                </div>
-              )
-            })}
-            <div className="shrink-0" style={{ height: `calc(50% - ${TICK_PX / 2}px)` }} />
-          </div>
-          <div className="pointer-events-none absolute top-1/2 left-0 h-1 w-6 -translate-y-1/2 rounded-full bg-accent" />
+    <div className="flex items-center gap-1.5">
+      <div className="flex w-11 flex-col items-end">
+        <span className="eyebrow text-[10px] text-ink-tertiary">{label}</span>
+        <span className="font-display text-[22px] font-black leading-none tabular-nums text-ink">{round1(value)}</span>
+      </div>
+      <div className="relative h-24 w-14">
+        <div
+          ref={ref}
+          role="slider"
+          tabIndex={0}
+          aria-label={label}
+          aria-orientation="vertical"
+          aria-valuemin={0}
+          aria-valuemax={max}
+          aria-valuenow={value}
+          onScroll={handleScroll}
+          onKeyDown={handleKeyDown}
+          className="flex h-full snap-y snap-mandatory flex-col overflow-y-auto overscroll-contain rounded-[var(--radius-control)] outline-offset-2 [mask-image:linear-gradient(transparent,black_25%,black_75%,transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {/* Half-height spacers let 0 and the max reach the center line. */}
+          <div className="shrink-0" style={{ height: `calc(50% - ${TICK_PX / 2}px)` }} />
+          {Array.from({ length: ticks + 1 }, (_, i) => {
+            const tick = round1(i * step)
+            return (
+              <div key={i} className="relative flex h-3 w-full shrink-0 snap-center items-center">
+                <span className={`h-0.5 rounded-full ${tick % majorEvery === 0 ? 'w-6 bg-ink' : 'w-3 bg-ink/35'}`} />
+                {tick % labelEvery === 0 && (
+                  <span className="absolute left-8 text-[10px] font-semibold tabular-nums text-ink-tertiary">{tick}</span>
+                )}
+              </div>
+            )
+          })}
+          <div className="shrink-0" style={{ height: `calc(50% - ${TICK_PX / 2}px)` }} />
         </div>
+        <div className="pointer-events-none absolute top-1/2 left-0 h-1 w-6 -translate-y-1/2 rounded-full bg-accent" />
       </div>
     </div>
   )
@@ -822,22 +963,79 @@ function SetBreakdown({
   )
 }
 
-function ExerciseLogCard({
+/** The exercise photo with its name, target and last result. Logging happens
+ * in the SetLogDock; in list mode tapping the card picks it for the dock. */
+function ExerciseStatusCard({
   exercise,
-  sessionId,
   loggedSets,
   lastSet,
   best,
   isNewPr,
-  onLogged,
+  selected,
+  onSelect,
 }: {
   exercise: Exercise
-  sessionId: number
   loggedSets: SessionSetDetail[]
   lastSet: LastSet | null
   best: PersonalRecord | null
   isNewPr: boolean
+  selected?: boolean
+  onSelect?: () => void
+}) {
+  const setCount = loggedSets.length
+  return (
+    <div
+      role={onSelect ? 'button' : undefined}
+      tabIndex={onSelect ? 0 : undefined}
+      aria-pressed={onSelect ? selected : undefined}
+      onClick={onSelect}
+      onKeyDown={(e) => {
+        if (onSelect && (e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) {
+          e.preventDefault()
+          onSelect()
+        }
+      }}
+      className={`sticker flex flex-col overflow-hidden rounded-[var(--radius-card)] bg-surface ${
+        onSelect ? 'cursor-pointer' : ''
+      } ${selected ? 'outline outline-[3px] outline-offset-2 outline-accent' : ''}`}
+    >
+      <ExerciseCard
+        framed={false}
+        exerciseKey={exercise.key}
+        title={exercise.name}
+        subtitle={`${setCount} set${setCount === 1 ? '' : 's'} logged · ${targetLabel(exercise)}${exercise.per_side ? ' per side' : ''}`}
+        chip={isNewPr ? 'New PR!' : targetLabel(exercise)}
+        className={onSelect ? 'min-h-[28vh]' : 'min-h-[40vh]'}
+      >
+        {/* Sits on the photo, under the name and target. min-h (not h) on the
+            card so opening the set breakdown grows the photo instead of
+            clipping the panel. */}
+        <div onClick={(e) => e.stopPropagation()}>
+          <LastResult exercise={exercise} lastSet={lastSet} best={best} thisSessionSets={loggedSets} />
+        </div>
+      </ExerciseCard>
+    </div>
+  )
+}
+
+/** The one set logger for the whole workout: rulers, Repeat last and Log set
+ * for the exercise in focus (or the one tapped in the list), pinned just above
+ * the tab bar while the page scrolls under it. */
+function SetLogDock({
+  exercise,
+  sessionId,
+  setCount,
+  lastSet,
+  onLogged,
+  onClose,
+}: {
+  exercise: Exercise
+  sessionId: number
+  setCount: number
+  lastSet: LastSet | null
   onLogged: (isNewPr: boolean) => void
+  /** Shown as a close button; focus mode has no way to close it. */
+  onClose?: () => void
 }) {
   const logSet = useLogSet()
   const [weight, setWeight] = useState(lastSet?.weight_kg ?? (exercise.equipment === 'bodyweight' ? 0 : 20))
@@ -853,8 +1051,6 @@ function ExerciseLogCard({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastSet?.exercise_id])
-
-  const setCount = loggedSets.length
 
   async function logCurrentValues() {
     const payload =
@@ -881,68 +1077,76 @@ function ExerciseLogCard({
   }
 
   return (
-    <div className="sticker flex flex-col overflow-hidden rounded-[var(--radius-card)] bg-surface">
-      <ExerciseCard
-        framed={false}
-        exerciseKey={exercise.key}
-        title={exercise.name}
-        subtitle={`${setCount} set${setCount === 1 ? '' : 's'} logged · ${targetLabel(exercise)}${exercise.per_side ? ' per side' : ''}`}
-        chip={isNewPr ? 'New PR!' : targetLabel(exercise)}
-        className="min-h-[40vh] border-b-2 border-ink"
-      >
-        {/* Sits on the photo, under the name and target. min-h (not h) on the
-            card so opening the set breakdown grows the photo instead of
-            clipping the panel. */}
-        <LastResult
-          exercise={exercise}
-          lastSet={lastSet}
-          best={best}
-          thisSessionSets={loggedSets}
-        />
-      </ExerciseCard>
+    // Sticky inside <main> (the scroller), offset past the floating tab bar
+    // on phones; wide screens have no tab bar.
+    <div className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-10 md:bottom-4">
+      <div className="sticker animate-dialog-in flex flex-col gap-1.5 rounded-[var(--radius-card)] bg-surface p-2.5 shadow-[var(--shadow-lg)]">
+        <div className="flex items-center gap-2">
+          <p className="min-w-0 flex-1 truncate font-display text-[13px] font-black uppercase leading-none text-ink">
+            {exercise.name}
+          </p>
+          <span className="shrink-0 text-[11px] font-semibold text-ink-tertiary">
+            {setCount < exercise.sets ? `Set ${setCount + 1} of ${exercise.sets}` : 'Extra set'}
+          </span>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close set logger"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-surface text-ink"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+              </svg>
+            </button>
+          )}
+        </div>
 
-      <div className="flex items-start justify-center gap-6 p-4">
-        {exercise.type === 'time' ? (
-          inMinutes(exercise) ? (
-            <Ruler
-              label="Minutes"
-              value={Math.round(durationSec / 60)}
-              step={1}
-              max={180}
-              majorEvery={5}
-              labelEvery={10}
-              onChange={(minutes) => setDurationSec(minutes * 60)}
-            />
-          ) : (
-            <Ruler
-              label="Seconds"
-              value={durationSec}
-              step={5}
-              max={300}
-              majorEvery={15}
-              labelEvery={30}
-              onChange={setDurationSec}
-            />
-          )
-        ) : (
-          <>
-            {tracksWeight(exercise) && (
-              <Ruler label="Kg" value={weight} step={1} max={200} majorEvery={5} labelEvery={10} onChange={setWeight} />
+        {/* One row: rulers on the left, the two actions stacked on the right. */}
+        <div className="flex items-center gap-3">
+          <div className="flex flex-1 justify-center gap-3">
+            {exercise.type === 'time' ? (
+              inMinutes(exercise) ? (
+                <Ruler
+                  label="Minutes"
+                  value={Math.round(durationSec / 60)}
+                  step={1}
+                  max={180}
+                  majorEvery={5}
+                  labelEvery={10}
+                  onChange={(minutes) => setDurationSec(minutes * 60)}
+                />
+              ) : (
+                <Ruler
+                  label="Seconds"
+                  value={durationSec}
+                  step={5}
+                  max={300}
+                  majorEvery={15}
+                  labelEvery={30}
+                  onChange={setDurationSec}
+                />
+              )
+            ) : (
+              <>
+                {tracksWeight(exercise) && (
+                  <Ruler label="Kg" value={weight} step={1} max={200} majorEvery={5} labelEvery={10} onChange={setWeight} />
+                )}
+                <Ruler label="Reps" value={reps} step={1} max={50} majorEvery={5} labelEvery={5} onChange={setReps} />
+              </>
             )}
-            <Ruler label="Reps" value={reps} step={1} max={50} majorEvery={5} labelEvery={5} onChange={setReps} />
-          </>
-        )}
-      </div>
-
-      <div className="flex gap-2 px-4 pb-4">
-        {lastSet && (
-          <Button variant="secondary" size="md" onClick={repeatLastSet} disabled={logSet.isPending} className="flex-1">
-            Repeat last
-          </Button>
-        )}
-        <Button size="md" onClick={logCurrentValues} disabled={logSet.isPending} className="flex-1">
-          Log set
-        </Button>
+          </div>
+          <div className="flex w-24 shrink-0 flex-col gap-2">
+            <Button size="md" onClick={logCurrentValues} disabled={logSet.isPending}>
+              Log set
+            </Button>
+            {lastSet && (
+              <Button variant="secondary" size="md" onClick={repeatLastSet} disabled={logSet.isPending}>
+                Repeat
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -953,22 +1157,17 @@ function ExerciseLogCard({
  * one again) -- repeat freely until you hit Finish workout. */
 function CustomExercisePicker({
   exercises,
-  sessionId,
   loggedSets,
-  lastSetByExercise,
-  bestByExercise,
-  newPrIds,
-  onLogged,
+  pickedId,
+  onPick,
+  renderCard,
 }: {
   exercises: Exercise[]
-  sessionId: number
   loggedSets: SessionSetDetail[]
-  lastSetByExercise: Record<number, LastSet>
-  bestByExercise: Record<number, PersonalRecord>
-  newPrIds: Record<number, boolean>
-  onLogged: (exerciseId: number, restSec: number, isNewPr: boolean) => void
+  pickedId: number | null
+  onPick: (exerciseId: number | null) => void
+  renderCard: (exercise: Exercise) => ReactNode
 }) {
-  const [pickedId, setPickedId] = useState<number | null>(null)
   const picked = exercises.find((e) => e.id === pickedId) ?? null
 
   if (picked) {
@@ -976,20 +1175,12 @@ function CustomExercisePicker({
       <div className="flex flex-col gap-3">
         <button
           type="button"
-          onClick={() => setPickedId(null)}
+          onClick={() => onPick(null)}
           className="press self-start rounded-full border-2 border-ink bg-surface px-3 py-1.5 font-display text-[12px] font-extrabold uppercase tracking-[0.03em] text-ink shadow-[var(--shadow-pop)]"
         >
           ‹ Choose another exercise
         </button>
-        <ExerciseLogCard
-          exercise={picked}
-          sessionId={sessionId}
-          loggedSets={loggedSets.filter((s) => s.exercise_id === picked.id)}
-          lastSet={lastSetByExercise[picked.id] ?? null}
-          best={bestByExercise[picked.id] ?? null}
-          isNewPr={Boolean(newPrIds[picked.id])}
-          onLogged={(isNewPr) => onLogged(picked.id, picked.rest_sec, isNewPr)}
-        />
+        {renderCard(picked)}
       </div>
     )
   }
@@ -1005,7 +1196,7 @@ function CustomExercisePicker({
               {items.map((ex) => {
                 const setCount = loggedSets.filter((s) => s.exercise_id === ex.id).length
                 return (
-                  <button key={ex.id} type="button" onClick={() => setPickedId(ex.id)} className="press text-left">
+                  <button key={ex.id} type="button" onClick={() => onPick(ex.id)} className="press text-left">
                     <ExerciseCard
                       exerciseKey={ex.key}
                       title={ex.name}

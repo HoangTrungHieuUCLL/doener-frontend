@@ -89,12 +89,15 @@ export function AppShell() {
           </button>
         </header>
 
-        <main className="flex-1 overflow-y-auto pb-28 md:pb-8">
+        {/* Bottom room for the tab bar lives on the inner wrapper, not on <main>:
+            padding on the scroll container would also push up anything sticky
+            to its bottom edge (the workout set logger). */}
+        <main className="flex-1 overflow-y-auto">
           {/* The Workout catalog is a photo grid, so it spreads to the full width;
               every other page keeps a readable column. */}
           <div
             key={location.pathname}
-            className={`animate-page-in mx-auto w-full px-4 py-6 md:px-8 md:py-10 ${
+            className={`animate-page-in mx-auto w-full px-4 pt-6 pb-[calc(8.5rem+env(safe-area-inset-bottom))] md:px-8 md:pt-10 md:pb-18 ${
               location.pathname === '/workout' ? '' : 'max-w-3xl'
             }`}
           >
