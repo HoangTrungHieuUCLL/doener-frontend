@@ -103,31 +103,35 @@ export function AppShell() {
             a plain bottom-2 would float the pill (rounded corners included)
             right into that exclusion zone. Requires viewport-fit=cover in
             index.html's viewport meta, or safe-area-inset-* is always 0. */}
-        <Glass
-          className="fixed inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-20 rounded-[var(--radius-card)] md:hidden"
-          style={{ background: 'var(--color-glass)' }}
-        >
-          <nav className="flex gap-1 px-2 py-2">
-            {NAV_ITEMS.map(({ to, label, Icon }) => (
-              <NavLink
-                key={to}
-                to={to}
-                className={({ isActive }) =>
-                  `tap-target flex flex-1 flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] py-1.5 font-display text-[10px] font-extrabold uppercase tracking-[0.05em] transition-colors ${
-                    isActive ? 'bg-highlight/80 text-ink' : 'text-ink-secondary'
-                  }`
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <Icon className="h-6 w-6" strokeWidth={isActive ? 2.4 : 1.9} />
-                    {label}
-                  </>
-                )}
-              </NavLink>
-            ))}
-          </nav>
-        </Glass>
+        {/* md:hidden lives on this wrapper, not on Glass: Glass sets an
+            inline display: inline-block, which beats any class-based display. */}
+        <div className="md:hidden">
+          <Glass
+            className="fixed inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-20 rounded-[var(--radius-card)]"
+            style={{ background: 'var(--color-glass)' }}
+          >
+            <nav className="flex gap-1 px-2 py-2">
+              {NAV_ITEMS.map(({ to, label, Icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  className={({ isActive }) =>
+                    `tap-target flex flex-1 flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] py-1.5 font-display text-[10px] font-extrabold uppercase tracking-[0.05em] transition-colors ${
+                      isActive ? 'bg-highlight/80 text-ink' : 'text-ink-secondary'
+                    }`
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <Icon className="h-6 w-6" strokeWidth={isActive ? 2.4 : 1.9} />
+                      {label}
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </nav>
+          </Glass>
+        </div>
       </div>
     </div>
   )
