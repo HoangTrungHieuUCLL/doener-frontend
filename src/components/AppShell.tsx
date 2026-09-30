@@ -32,10 +32,13 @@ export function AppShell() {
   const { user, logout } = useAuth()
   const location = useLocation()
 
+  // Exactly one screen tall, with <main> as the only scroller: the page itself
+  // never scrolls, so the header and bottom tab bar stay put instead of riding
+  // iOS's scroll and toolbar resizing.
   return (
-    <div className="flex min-h-dvh w-full flex-col md:flex-row">
+    <div className="flex h-dvh w-full flex-col overflow-hidden md:flex-row">
       {/* Desktop sidebar */}
-      <aside className="glass hidden w-64 shrink-0 flex-col px-4 py-6 md:flex">
+      <aside className="glass hidden w-64 shrink-0 flex-col overflow-y-auto px-4 py-6 md:flex">
         <div className="mb-8 px-2">
           <Wordmark size="md" />
         </div>
@@ -73,8 +76,10 @@ export function AppShell() {
       </aside>
 
       {/* Main content */}
-      <div className="flex min-h-dvh flex-1 flex-col">
-        <header className="glass flex items-center justify-between px-4 py-2.5 md:hidden">
+      <div className="flex min-h-0 flex-1 flex-col">
+        {/* Installed to the home screen, the app runs edge-to-edge under the status
+            bar (viewport-fit=cover + black-translucent), so pad past it. */}
+        <header className="glass flex items-center justify-between px-4 pt-[calc(0.625rem+env(safe-area-inset-top))] pb-2.5 md:hidden">
           <Wordmark size="sm" />
           <button
             onClick={logout}

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../client'
 import { queryKeys } from '../queryKeys'
-import type { ConsistencyDay, ExerciseProgressPoint, LastSet, PersonalRecord, VolumePoint } from '../types'
+import type { ConsistencyDay, LastSet, PersonalRecord, VolumePoint } from '../types'
 
 export function useVolumeStats(limit = 10) {
   return useQuery({
@@ -31,14 +31,6 @@ export function useLastSets(excludeSessionId: number | null = null) {
           ? '/stats/last-sets'
           : `/stats/last-sets?exclude_session_id=${excludeSessionId}`,
       ),
-  })
-}
-
-export function useExerciseProgress(exerciseId: number | null) {
-  return useQuery({
-    queryKey: queryKeys.statsExerciseProgress(exerciseId ?? -1),
-    queryFn: () => api.get<ExerciseProgressPoint[]>(`/stats/exercise/${exerciseId}/progress`),
-    enabled: exerciseId !== null,
   })
 }
 

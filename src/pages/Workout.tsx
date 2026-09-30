@@ -94,7 +94,7 @@ export function Workout() {
           return (
             <section key={key} className="flex flex-col gap-3">
               <h2 className="eyebrow text-[18px]">{label}</h2>
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-[repeat(auto-fill,minmax(14rem,1fr))]">
+              <div className="grid grid-cols-3 gap-2 md:gap-3 md:grid-cols-[repeat(auto-fill,minmax(14rem,1fr))]">
                 {items.map((ex) => {
                   const expanded = expandedId === ex.id
                   return (
@@ -105,6 +105,7 @@ export function Workout() {
                       className="press text-left"
                     >
                       <ExerciseCard
+                        compact
                         exerciseKey={ex.key}
                         title={ex.name}
                         subtitle={`${targetLabel(ex)}${ex.per_side ? ' per side' : ''}`}

@@ -41,11 +41,29 @@ export function formatTimed(exercise: Exercise, sec: number): string {
   return inMinutes(exercise) ? `${Math.round(sec / 60)} min` : `${sec}s`
 }
 
+// Reps-only moves: nobody loads these, so the logger asks for reps alone.
+// Other bodyweight moves (reverse lunge, pull-up) keep kg for added weight.
+const REPS_ONLY_KEYS = new Set([
+  'warmup_swimmers',
+  'warmup_jumping_jacks',
+  'warmup_horizontal_arm_swings',
+  'warmup_torso_rotation_swings',
+  'a_push_up',
+  'custom_sit_up',
+  'custom_burpee',
+])
+
+/** Whether sets of this exercise record a weight. */
+export function tracksWeight(exercise: Exercise): boolean {
+  return exercise.type === 'reps' && !REPS_ONLY_KEYS.has(exercise.key)
+}
+
 /** What the logger asks for on this exercise, in plain words. */
 export function loggingLabel(exercise: Exercise): string {
   if (exercise.type === 'time') {
     return inMinutes(exercise) ? 'Minutes, for each set.' : 'Seconds held, for each set.'
   }
+  if (!tracksWeight(exercise)) return 'Reps, for each set.'
   if (exercise.equipment === 'bodyweight') {
     return 'Reps for each set, plus kg of any added weight (0 if none).'
   }

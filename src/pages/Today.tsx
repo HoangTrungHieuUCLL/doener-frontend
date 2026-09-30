@@ -30,7 +30,7 @@ import { Sparkline } from '../components/ui/Sparkline'
 import { formatRelativeDay, todayISO } from '../lib/date'
 import { formatDuration, useCountdown, usePausableStopwatch } from '../lib/useStopwatch'
 import { useLocalStorageState } from '../lib/useLocalStorageState'
-import { CATALOG_SECTIONS, WORKOUT_LABELS, formatTimed, inMinutes, targetLabel } from '../lib/workouts'
+import { CATALOG_SECTIONS, WORKOUT_LABELS, formatTimed, inMinutes, targetLabel, tracksWeight } from '../lib/workouts'
 import { buildSessionQueue } from '../lib/sessionQueue'
 import type { AddedExercise } from '../lib/sessionQueue'
 
@@ -652,6 +652,7 @@ function describeSet(exercise: Exercise, set: SetShape): string {
   if (exercise.type === 'time') {
     return set.duration_sec === null ? '—' : formatTimed(exercise, set.duration_sec)
   }
+  if (!tracksWeight(exercise)) return set.reps === null ? '—' : `${set.reps} reps`
   const parts: string[] = []
   if (set.weight_kg !== null) parts.push(`${round1(set.weight_kg)} kg`)
   if (set.reps !== null) parts.push(`× ${set.reps}`)
@@ -663,7 +664,9 @@ function describeSet(exercise: Exercise, set: SetShape): string {
 function topSet<T extends SetShape>(exercise: Exercise, sets: T[]): T | null {
   if (sets.length === 0) return null
   const score = (s: SetShape) =>
-    exercise.type === 'time' ? (s.duration_sec ?? 0) : (s.weight_kg ?? 0) * 1000 + (s.reps ?? 0)
+    exercise.type === 'time'
+      ? (s.duration_sec ?? 0)
+      : (tracksWeight(exercise) ? (s.weight_kg ?? 0) * 1000 : 0) + (s.reps ?? 0)
   return sets.reduce((best, s) => (score(s) > score(best) ? s : best), sets[0])
 }
 
@@ -690,11 +693,13 @@ function LastResult({
   // still returns only the flat last-set fields.
   const lastSessionSets = lastSet?.sets ?? []
   const last = topSet(exercise, lastSessionSets)
-  // Timed exercises have no weight to hold a record against.
-  const showBest = exercise.type !== 'time' && best !== null
+  // Timed and reps-only exercises have no weight to hold a record against.
+  const showBest = tracksWeight(exercise) && best !== null
 
   const trendValues = (lastSet?.trend ?? [])
-    .map((p) => (exercise.type === 'time' ? p.top_duration_sec : p.top_weight_kg))
+    .map((p) =>
+      exercise.type === 'time' ? p.top_duration_sec : tracksWeight(exercise) ? p.top_weight_kg : p.top_reps,
+    )
     .filter((v): v is number => v !== null)
 
   return (
@@ -836,7 +841,7 @@ function ExerciseLogCard({
     const payload =
       exercise.type === 'time'
         ? { sessionId, exercise_id: exercise.id, duration_sec: durationSec }
-        : { sessionId, exercise_id: exercise.id, weight_kg: weight, reps }
+        : { sessionId, exercise_id: exercise.id, weight_kg: tracksWeight(exercise) ? weight : undefined, reps }
     const result = await logSet.mutateAsync(payload)
     onLogged(result.is_new_pr)
   }
@@ -849,7 +854,7 @@ function ExerciseLogCard({
         : {
             sessionId,
             exercise_id: exercise.id,
-            weight_kg: lastSet.weight_kg ?? undefined,
+            weight_kg: tracksWeight(exercise) ? (lastSet.weight_kg ?? undefined) : undefined,
             reps: lastSet.reps ?? undefined,
           }
     const result = await logSet.mutateAsync(payload)
@@ -902,7 +907,9 @@ function ExerciseLogCard({
           )
         ) : (
           <>
-            <Ruler label="Kg" value={weight} step={1} max={200} majorEvery={5} labelEvery={10} onChange={setWeight} />
+            {tracksWeight(exercise) && (
+              <Ruler label="Kg" value={weight} step={1} max={200} majorEvery={5} labelEvery={10} onChange={setWeight} />
+            )}
             <Ruler label="Reps" value={reps} step={1} max={50} majorEvery={5} labelEvery={5} onChange={setReps} />
           </>
         )}

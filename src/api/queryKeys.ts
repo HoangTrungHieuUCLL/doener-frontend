@@ -8,7 +8,6 @@ export const queryKeys = {
   statsPrs: () => ['stats', 'prs'] as const,
   statsLastSets: (excludeSessionId: number | null) =>
     ['stats', 'last-sets', excludeSessionId] as const,
-  statsExerciseProgress: (exerciseId: number) => ['stats', 'exercise', exerciseId, 'progress'] as const,
   statsConsistency: (from: string, to: string) => ['stats', 'consistency', from, to] as const,
   together: () => ['together'] as const,
 }

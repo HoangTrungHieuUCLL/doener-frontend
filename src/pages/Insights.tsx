@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { useExercises } from '../api/hooks/useExercises'
-import { useConsistency, useExerciseProgress, useVolumeStats } from '../api/hooks/useStats'
+import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { useConsistency, useVolumeStats } from '../api/hooks/useStats'
 import type { WorkoutKey } from '../api/types'
 import { Card } from '../components/ui/Card'
 import { Calendar } from '../components/ui/Calendar'
@@ -23,84 +22,9 @@ export function Insights() {
         <p className="mt-2 text-[15px] text-ink-secondary">Deeper trends behind the numbers.</p>
       </header>
 
-      <ExerciseProgressChart />
       <VolumeByCategoryChart />
       <ConsistencyHeatmap />
     </div>
-  )
-}
-
-function ExerciseProgressChart() {
-  const { data: exercises } = useExercises()
-  const nonWarmup = useMemo(
-    () => (exercises ?? []).filter((e) => e.category !== 'warmup').sort((a, b) => a.name.localeCompare(b.name)),
-    [exercises],
-  )
-  const [exerciseId, setExerciseId] = useState<number | null>(null)
-  const selectedId = exerciseId ?? nonWarmup[0]?.id ?? null
-  const { data, isLoading } = useExerciseProgress(selectedId)
-
-  const chartData = (data ?? [])
-    .filter((p) => p.weight_kg !== null)
-    .map((p) => ({ ...p, label: formatShortDate(p.date) }))
-
-  return (
-    <section className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <h2 className="eyebrow">
-          Per-exercise progress
-        </h2>
-        <select
-          value={selectedId ?? ''}
-          onChange={(e) => setExerciseId(Number(e.target.value))}
-          className="tap-target max-w-[55%] rounded-[var(--radius-control)] border-2 border-ink bg-surface px-2 text-[13px] font-semibold text-ink shadow-[var(--shadow-pop)]"
-        >
-          {nonWarmup.map((ex) => (
-            <option key={ex.id} value={ex.id}>
-              {ex.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      <Card>
-        {isLoading ? (
-          <p className="py-8 text-center text-ink-tertiary">Loading…</p>
-        ) : chartData.length === 0 ? (
-          <p className="py-8 text-center text-ink-tertiary">No weighted sets logged for this exercise yet.</p>
-        ) : (
-          <div className="h-52 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 8, right: 12, left: -4, bottom: 0 }}>
-                <XAxis
-                  dataKey="label"
-                  tick={{ fontSize: 11, fill: 'var(--color-ink-tertiary)' }}
-                  axisLine={{ stroke: 'var(--color-ink)', strokeWidth: 2 }}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 11, fill: 'var(--color-ink-tertiary)' }}
-                  axisLine={false}
-                  tickLine={false}
-                  width={44}
-                />
-                <Tooltip
-                  contentStyle={{ borderRadius: 12, border: '2px solid var(--color-ink)', boxShadow: 'var(--shadow-pop)', fontSize: 13, fontWeight: 600 }}
-                  formatter={(value) => [`${value} kg`, 'Weight']}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="weight_kg"
-                  stroke="var(--color-accent)"
-                  strokeWidth={3.5}
-                  dot={{ r: 4, fill: 'var(--color-highlight)', stroke: 'var(--color-ink)', strokeWidth: 2 }}
-                  activeDot={{ r: 6, fill: 'var(--color-highlight)', stroke: 'var(--color-ink)', strokeWidth: 2 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </Card>
-    </section>
   )
 }
 
