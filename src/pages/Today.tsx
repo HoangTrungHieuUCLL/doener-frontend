@@ -401,6 +401,14 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
               <path d="M3 12a9 9 0 1 1 3 6.7M3 12v5h5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
+          <button
+            type="button"
+            onClick={handleFinish}
+            disabled={finishSession.isPending}
+            className="tap-target press rounded-full border-2 border-ink bg-accent px-4 font-display text-[13px] font-extrabold uppercase tracking-[0.05em] text-white shadow-[var(--shadow-pop)] disabled:opacity-40"
+          >
+            {finishSession.isPending ? 'Finishing…' : 'Finish'}
+          </button>
         </div>
       </header>
 
@@ -501,24 +509,13 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
             />
           </div>
           {statusCard(focusExercise)}
-          <div className="flex flex-wrap justify-center gap-2">
-            {otherRemaining.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setSwitching(true)}
-                className="press rounded-full border-2 border-ink bg-surface px-3 py-1.5 font-display text-[12px] font-extrabold uppercase tracking-[0.03em] text-ink shadow-[var(--shadow-pop)]"
-              >
-                Do another exercise
-              </button>
-            )}
-            {addedIds.has(focusExercise.id) && (
-              <RemoveAddedButton
-                exercise={focusExercise}
-                logged={loggedSets.some((s) => s.exercise_id === focusExercise.id)}
-                onRemove={() => handleRemoveAdded(focusExercise.id)}
-              />
-            )}
-          </div>
+          {addedIds.has(focusExercise.id) && (
+            <RemoveAddedButton
+              exercise={focusExercise}
+              logged={loggedSets.some((s) => s.exercise_id === focusExercise.id)}
+              onRemove={() => handleRemoveAdded(focusExercise.id)}
+            />
+          )}
         </section>
       ) : (
         <p className="headline py-6 text-center text-[28px]">
@@ -549,25 +546,26 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
       )}
 
       {/* Same frame, corners and height as the exercise cards above. */}
-      <div className="flex gap-3">
-        {workoutKey !== 'cardio' && workoutKey !== 'custom' && (
+      {workoutKey !== 'cardio' && workoutKey !== 'custom' && (
+        <div className="flex gap-3">
+          {viewMode === 'focus' && otherRemaining.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setSwitching(true)}
+              className="sticker press h-14 flex-1 rounded-[var(--radius-card)] bg-surface px-2 font-display text-[13px] font-extrabold uppercase leading-tight tracking-[0.03em] text-ink"
+            >
+              Do another exercise
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setPicking(true)}
-            className="sticker press h-14 flex-1 rounded-[var(--radius-card)] bg-surface font-display text-[14px] font-extrabold uppercase tracking-[0.03em] text-ink"
+            className="sticker press h-14 flex-1 rounded-[var(--radius-card)] bg-surface px-2 font-display text-[13px] font-extrabold uppercase leading-tight tracking-[0.03em] text-ink"
           >
             + Add an exercise
           </button>
-        )}
-        <button
-          type="button"
-          onClick={handleFinish}
-          disabled={finishSession.isPending}
-          className="sticker press h-14 flex-1 rounded-[var(--radius-card)] bg-accent font-display text-[14px] font-extrabold uppercase tracking-[0.03em] text-white disabled:opacity-40"
-        >
-          {finishSession.isPending ? 'Finishing…' : 'Finish workout'}
-        </button>
-      </div>
+        </div>
+      )}
 
       {logTarget && (
         <SetLogDock
