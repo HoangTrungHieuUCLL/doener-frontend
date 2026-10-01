@@ -133,6 +133,21 @@ body {
 
 /* Dimmed modal backdrop that also blurs whatever's behind it, so the
    frosted dialog panel has something to refract. */
+/* Dynamic viewport height, with a vh fallback for older engines. On mobile
+   Safari `vh` means the viewport with the browser toolbars *hidden*, so a
+   vh-sized box overshoots the screen whenever they are showing; dvh tracks
+   what is actually visible. Written as utilities because a Tailwind
+   arbitrary value cannot express a two-declaration fallback. */
+@utility h-media-tall {
+  height: 40vh;
+  height: 40dvh;
+}
+
+@utility max-h-sheet {
+  max-height: 85vh;
+  max-height: 85dvh;
+}
+
 @utility scrim {
   background: rgba(20, 20, 20, 0.35);
   @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {

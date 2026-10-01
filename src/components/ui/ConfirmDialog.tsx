@@ -1,4 +1,5 @@
 import { Button } from './Button'
+import { Overlay } from './Overlay'
 
 export function ConfirmDialog({
   title,
@@ -18,14 +19,11 @@ export function ConfirmDialog({
   pending?: boolean
 }) {
   return (
-    <div
-      className="animate-overlay-in scrim fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={onCancel}
-    >
+    <Overlay onClose={onCancel}>
       <div
         role="alertdialog"
         aria-modal="true"
-        className="animate-dialog-in glass w-full max-w-xs rounded-[var(--radius-card)] p-5"
+        className="animate-dialog-in glass w-full max-w-xs cursor-auto rounded-[var(--radius-card)] p-5"
         onClick={(e) => e.stopPropagation()}
       >
         <p className="headline text-[24px]">{title}</p>
@@ -39,6 +37,6 @@ export function ConfirmDialog({
           </Button>
         </div>
       </div>
-    </div>
+    </Overlay>
   )
 }

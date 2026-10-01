@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Exercise } from '../api/types'
 import { Button } from './ui/Button'
 import { ExerciseCard } from './ui/ExerciseCard'
+import { Overlay } from './ui/Overlay'
 import { CATALOG_SECTIONS, targetLabel } from '../lib/workouts'
 
 export type Placement = 'next' | 'end'
@@ -42,18 +43,15 @@ export function AddExerciseSheet({
   const [picked, setPicked] = useState<Exercise | null>(null)
 
   return (
-    <div
-      className="animate-overlay-in scrim fixed inset-0 z-50 flex items-end justify-center sm:items-center"
-      onClick={onClose}
-    >
+    <Overlay onClose={onClose} align="bottom">
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Add an exercise"
-        className="animate-dialog-in flex max-h-[85vh] w-full max-w-md flex-col rounded-t-[var(--radius-card)] border-2 border-ink bg-bg shadow-[var(--shadow-lg)] sm:rounded-[var(--radius-card)]"
+        className="animate-dialog-in max-h-sheet flex w-full max-w-md cursor-auto flex-col rounded-t-[var(--radius-card)] border-2 border-ink bg-bg shadow-[var(--shadow-lg)] sm:rounded-[var(--radius-card)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="flex items-center justify-between gap-3 border-b-2 border-ink/10 p-4">
+        <header className="flex shrink-0 items-center justify-between gap-3 border-b-2 border-ink/10 p-4">
           <p className="headline text-[26px]">
             {picked ? 'Add to this workout' : (
               <>
@@ -103,7 +101,7 @@ export function AddExerciseSheet({
             </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-6 overflow-y-auto p-4">
+          <div className="flex flex-col gap-6 overflow-y-auto overscroll-contain p-4">
             {orderedSections(exercises, inQueueIds).map(({ key, label, items }) => {
               return (
                 <section key={key} className="flex flex-col gap-3">
@@ -137,7 +135,17 @@ export function AddExerciseSheet({
             })}
           </div>
         )}
+
+        {/* The X sits at the top of a sheet that can be most of the screen
+            tall; this is the one that is actually reachable with a thumb. */}
+        {!picked && (
+          <div className="border-t-2 border-ink/10 p-4">
+            <Button variant="secondary" size="md" className="w-full" onClick={onClose}>
+              Cancel
+            </Button>
+          </div>
+        )}
       </div>
-    </div>
+    </Overlay>
   )
 }

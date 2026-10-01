@@ -810,7 +810,7 @@ function ExerciseLogCard({
         title={exercise.name}
         subtitle={`${setCount} set${setCount === 1 ? '' : 's'} logged · ${targetLabel(exercise)}${exercise.per_side ? ' per side' : ''}`}
         chip={isNewPr ? 'New PR!' : targetLabel(exercise)}
-        className="h-[40vh] border-b-2 border-ink"
+        className="h-media-tall border-b-2 border-ink"
       />
 
       <LastResult

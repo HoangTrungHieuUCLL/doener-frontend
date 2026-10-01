@@ -6,6 +6,7 @@ import { Card } from '../components/ui/Card'
 import { Calendar } from '../components/ui/Calendar'
 import { Button } from '../components/ui/Button'
 import { ExerciseCard } from '../components/ui/ExerciseCard'
+import { Overlay } from '../components/ui/Overlay'
 import { monthDates, nextWeekdayOccurrences, todayISO, WEEKDAY_NAMES } from '../lib/date'
 import { WORKOUT_DOT, WORKOUT_LABELS, WORKOUT_OPTIONS, targetLabel } from '../lib/workouts'
 
@@ -199,12 +200,9 @@ export function Plan() {
           )}
 
           {pendingPlan && (
-            <div
-              className="animate-overlay-in scrim fixed inset-0 z-50 flex items-center justify-center p-4"
-              onClick={() => setPendingPlan(null)}
-            >
+            <Overlay onClose={() => setPendingPlan(null)}>
               <div
-                className="animate-dialog-in glass w-full max-w-xs rounded-[var(--radius-card)] p-5"
+                className="animate-dialog-in glass w-full max-w-xs cursor-auto rounded-[var(--radius-card)] p-5"
                 onClick={(e) => e.stopPropagation()}
               >
                 {(() => {
@@ -230,7 +228,7 @@ export function Plan() {
                   </Button>
                 </div>
               </div>
-            </div>
+            </Overlay>
           )}
         </>
       )}
