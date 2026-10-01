@@ -31,6 +31,15 @@ export function useSessionsList(page: number) {
   })
 }
 
+/** Every session started on one date (YYYY-MM-DD), newest first. */
+export function useSessionsOnDate(date: string | null) {
+  return useQuery({
+    queryKey: queryKeys.sessionsOnDate(date ?? ''),
+    queryFn: () => api.get<SessionListResponse>(`/sessions?date=${date}&limit=50`),
+    enabled: date !== null,
+  })
+}
+
 export function useStartSession() {
   const queryClient = useQueryClient()
   return useMutation({

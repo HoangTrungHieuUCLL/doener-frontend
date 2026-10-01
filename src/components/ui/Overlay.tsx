@@ -12,8 +12,8 @@ import type { ReactNode } from 'react'
  * whole scrolled page instead of the screen, which puts it, and its close
  * button, arbitrarily far out of view. The portal escapes that wrapper.
  *
- * Also locks the page behind it, so a drag on the dialog cannot scroll the
- * page out from under it, and closes on Escape.
+ * Also freezes the content behind it, so a drag on the dialog cannot scroll
+ * the page out from under it, and closes on Escape.
  */
 export function Overlay({
   onClose,
@@ -34,27 +34,15 @@ export function Overlay({
   }, [onClose])
 
   useEffect(() => {
-    // Pinning the body is the one scroll lock iOS Safari actually honours;
-    // `overflow: hidden` alone does not stop it. The offset keeps the page
-    // from jumping to the top while the dialog is open.
-    const scrollY = window.scrollY
-    const { style } = document.body
-    const previous = {
-      position: style.position,
-      top: style.top,
-      width: style.width,
-      overflow: style.overflow,
-    }
-    style.position = 'fixed'
-    style.top = `-${scrollY}px`
-    style.width = '100%'
-    style.overflow = 'hidden'
+    // The app shell makes <main> the only scroller -- the page itself never
+    // moves -- so that is what has to be frozen while a dialog is open.
+    // Falls back to the body for any screen rendered outside the shell.
+    const scroller: HTMLElement =
+      document.querySelector('[data-app-scroller]') ?? document.body
+    const previous = scroller.style.overflow
+    scroller.style.overflow = 'hidden'
     return () => {
-      style.position = previous.position
-      style.top = previous.top
-      style.width = previous.width
-      style.overflow = previous.overflow
-      window.scrollTo(0, scrollY)
+      scroller.style.overflow = previous
     }
   }, [])
 
@@ -63,7 +51,9 @@ export function Overlay({
       // `cursor-pointer` is not decoration: iOS Safari does not fire click
       // on a plain div, so without it tapping the scrim to dismiss silently
       // does nothing on an iPhone.
-      className={`animate-overlay-in scrim fixed inset-0 z-50 flex cursor-pointer justify-center p-4 ${
+      // Height comes from --app-h, not inset-0: installed to the iOS home
+      // screen, 100dvh/100svh fall short of the real screen (see index.css).
+      className={`animate-overlay-in scrim fixed inset-x-0 top-0 z-50 h-[var(--app-h)] flex cursor-pointer justify-center p-4 ${
         align === 'bottom' ? 'items-end p-0 sm:items-center sm:p-4' : 'items-center'
       }`}
       onClick={onClose}

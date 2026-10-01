@@ -3,7 +3,7 @@ import { useExercises } from '../api/hooks/useExercises'
 import type { Exercise } from '../api/types'
 import { ExerciseCard } from '../components/ui/ExerciseCard'
 import { EXERCISE_GUIDES } from '../lib/exerciseGuides'
-import { targetLabel, WORKOUT_LABELS } from '../lib/workouts'
+import { loggingLabel, targetLabel, WORKOUT_LABELS } from '../lib/workouts'
 
 const PRINCIPLES: { title: string; body: string }[] = [
   {
@@ -59,7 +59,7 @@ export function Workout() {
         <p className="mt-2 text-[15px] text-ink-secondary">Every exercise, how to do it, and what to watch for.</p>
       </header>
 
-      <details className="sticker group flex flex-col gap-4 rounded-[var(--radius-card)] bg-highlight-soft p-4">
+      <details className="sticker group flex max-w-3xl flex-col gap-4 rounded-[var(--radius-card)] bg-highlight-soft p-4">
         <summary className="headline flex cursor-pointer list-none items-center justify-between gap-2 text-[26px] [&::-webkit-details-marker]:hidden">
           <span>How this plan <span className="marker">works</span></span>
           <svg
@@ -94,7 +94,7 @@ export function Workout() {
           return (
             <section key={key} className="flex flex-col gap-3">
               <h2 className="eyebrow text-[18px]">{label}</h2>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-2 md:gap-3 md:grid-cols-[repeat(auto-fill,minmax(14rem,1fr))]">
                 {items.map((ex) => {
                   const expanded = expandedId === ex.id
                   return (
@@ -105,6 +105,7 @@ export function Workout() {
                       className="press text-left"
                     >
                       <ExerciseCard
+                        compact
                         exerciseKey={ex.key}
                         title={ex.name}
                         subtitle={`${targetLabel(ex)}${ex.per_side ? ' per side' : ''}`}
@@ -115,7 +116,7 @@ export function Workout() {
                 })}
               </div>
               {expandedEx && guide && (
-                <div className="sticker animate-page-in flex flex-col gap-3 rounded-[var(--radius-card)] bg-surface p-4">
+                <div className="sticker animate-page-in flex max-w-3xl flex-col gap-3 rounded-[var(--radius-card)] bg-surface p-4">
                   <p className="headline text-[22px] leading-[1.02]">{expandedEx.name}</p>
                   <div>
                     <p className="eyebrow mb-1.5 text-[12px]">How to</p>
@@ -124,6 +125,10 @@ export function Workout() {
                         <li key={i}>{step}</li>
                       ))}
                     </ol>
+                  </div>
+                  <div>
+                    <p className="eyebrow mb-1.5 text-[12px]">How it's logged</p>
+                    <p className="text-[14px] text-ink">{loggingLabel(expandedEx)}</p>
                   </div>
                   <div className="rounded-[var(--radius-control)] border-2 border-ink bg-negative-soft p-3">
                     <p className="eyebrow mb-0.5 text-[12px] text-negative-text">Watch out for</p>

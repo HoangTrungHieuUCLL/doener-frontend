@@ -13,6 +13,8 @@ export function usePlan(from: string, to: string) {
 export interface SetPlanInput {
   date: string
   workout_key: WorkoutKey
+  /** Add after the day's existing workouts instead of replacing them. */
+  append?: boolean
 }
 
 export function useSetPlan() {

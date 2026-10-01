@@ -48,7 +48,7 @@ export function AddExerciseSheet({
         role="dialog"
         aria-modal="true"
         aria-label="Add an exercise"
-        className="animate-dialog-in max-h-sheet flex w-full max-w-md cursor-auto flex-col rounded-t-[var(--radius-card)] border-2 border-ink bg-bg shadow-[var(--shadow-lg)] sm:rounded-[var(--radius-card)]"
+        className="animate-dialog-in flex max-h-[85%] w-full max-w-md cursor-auto flex-col rounded-t-[var(--radius-card)] border-2 border-ink bg-bg shadow-[var(--shadow-lg)] sm:rounded-[var(--radius-card)]"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex shrink-0 items-center justify-between gap-3 border-b-2 border-ink/10 p-4">

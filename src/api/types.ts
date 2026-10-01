@@ -154,13 +154,6 @@ export interface LastSet {
   trend: ExerciseTrendPoint[]
 }
 
-export interface ExerciseProgressPoint {
-  session_id: number
-  date: string
-  weight_kg: number | null
-  reps: number | null
-}
-
 export interface ConsistencyDay {
   date: string
   planned_key: WorkoutKey | null
