@@ -128,7 +128,29 @@ export function AppShell() {
         <div className="md:hidden">
           <Glass
             className="sticker absolute inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-20 rounded-[var(--radius-card)]"
-            style={{ background: 'var(--color-glass)' }}
+            // A thinner tint than --color-glass: the less milk, the more of the
+            // frost and the edge-light reads as glass rather than as paint.
+            style={{ background: 'rgba(255, 255, 255, 0.26)' }}
+            // Bending the LIVE page needs backdrop-filter: url(), which is
+            // Chromium-only, so on iOS Safari this lens frosts, tints and
+            // edge-lights but cannot refract. frost / specular / sheen / glow
+            // are therefore what carry the glass on a phone; depth, curvature,
+            // bend and dispersion only add refraction where it is supported.
+            optics={{
+              frost: 8,
+              saturate: 1.35,
+              specular: 0.95,
+              sheen: 0.6,
+              sheenWidth: 6,
+              sheenAngle: 290,
+              glow: 0.16,
+              depth: 0.32,
+              curvature: 0.45,
+              bend: 0.68,
+              bendWidth: 0.4,
+              dispersion: 0.5,
+              strength: 0.45,
+            }}
           >
             <nav className="flex gap-1 p-1.5">
               {NAV_ITEMS.map(({ to, label, Icon }) => (
