@@ -1,3 +1,4 @@
+import { Glass } from '@samasante/liquid-glass'
 import type { ComponentType, SVGProps } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
@@ -104,36 +105,55 @@ export function AppShell() {
           </div>
         </main>
 
-        {/* Mobile bottom tab bar, framed like the cards (ink border, card
-            shadow), active tab styled like the desktop sidebar's.
+        {/* Mobile bottom tab bar: a real liquid-glass lens that refracts the
+            content scrolling behind it, keeping the card frame (ink border +
+            card shadow, via `sticker`) and the sidebar-style active tab.
+            `sticker` sets only a border and a shadow -- no background -- so it
+            frames the lens instead of covering it.
+
+            <Glass> IS the positioned box and wraps the real <nav>: it measures
+            and refracts its children, and a childless Glass collapses to zero
+            size with nothing to fit itself to. The NavLink anchors inside stay
+            clickable (unlike liquidGL, dropped in d572ec7, which set
+            pointer-events: none on the element it was applied to).
+
+            md:hidden sits on a plain wrapper, not on Glass: Glass inline-styles
+            display: inline-block, and an inline style beats the utility class.
 
             Offset by env(safe-area-inset-bottom): installed as a home-screen
             app on iOS, the viewport runs edge-to-edge under the home
             indicator, so a plain bottom-2 would float the bar (rounded corners
             included) into that exclusion zone. Requires viewport-fit=cover in
             index.html's viewport meta, or safe-area-inset-* is always 0. */}
-        <nav className="sticker absolute inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-20 flex gap-1 rounded-[var(--radius-card)] bg-surface p-1.5 md:hidden">
-          {NAV_ITEMS.map(({ to, label, Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                `tap-target flex flex-1 flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] border-2 py-1.5 font-display text-[10px] font-extrabold uppercase tracking-[0.05em] transition-[background-color,color,box-shadow,border-color] ${
-                  isActive
-                    ? 'border-ink bg-highlight text-ink shadow-[var(--shadow-pop)]'
-                    : 'border-transparent text-ink-secondary'
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <Icon className="h-6 w-6" strokeWidth={isActive ? 2.4 : 1.9} />
-                  {label}
-                </>
-              )}
-            </NavLink>
-          ))}
-        </nav>
+        <div className="md:hidden">
+          <Glass
+            className="sticker absolute inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-20 rounded-[var(--radius-card)]"
+            style={{ background: 'var(--color-glass)' }}
+          >
+            <nav className="flex gap-1 p-1.5">
+              {NAV_ITEMS.map(({ to, label, Icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  className={({ isActive }) =>
+                    `tap-target flex flex-1 flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] border-2 py-1.5 font-display text-[10px] font-extrabold uppercase tracking-[0.05em] transition-[background-color,color,box-shadow,border-color] ${
+                      isActive
+                        ? 'border-ink bg-highlight text-ink shadow-[var(--shadow-pop)]'
+                        : 'border-transparent text-ink-secondary'
+                    }`
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <Icon className="h-6 w-6" strokeWidth={isActive ? 2.4 : 1.9} />
+                      {label}
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </nav>
+          </Glass>
+        </div>
       </div>
     </div>
   )
