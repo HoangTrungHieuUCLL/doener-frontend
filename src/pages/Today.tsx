@@ -356,7 +356,7 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
   )
 
   return (
-    <div className="flex flex-col gap-6 pb-6">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       {/* The clock, pause, reset and Finish now live in the dock, so the top
           of the screen is just the title and the cards start higher. */}
       <header>
@@ -516,7 +516,7 @@ function ExerciseCarousel({
   }, [scrollKey])
 
   return (
-    <section className="flex flex-col gap-3">
+    <section className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="eyebrow flex items-center justify-between text-[12px]">
         <span>{centered ? sectionLabel(centered) : ''}</span>
         <span>
@@ -552,7 +552,7 @@ function ExerciseCarousel({
       <div
         ref={trackRef}
         onScroll={handleScroll}
-        className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="-mx-4 flex min-h-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {exercises.map((ex) => (
           <div
@@ -891,7 +891,9 @@ function ExerciseStatusCard({
           onSelect()
         }
       }}
-      className={`sticker flex flex-col overflow-hidden rounded-[var(--radius-card)] bg-surface ${
+      // min-h-0 flex-1 so the card fills the height the carousel hands it,
+      // sharing with the remove button when an added exercise has one.
+      className={`sticker flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-card)] bg-surface ${
         onSelect ? 'cursor-pointer' : ''
       } ${selected ? 'outline outline-[3px] outline-offset-2 outline-accent' : ''}`}
     >
@@ -903,7 +905,7 @@ function ExerciseStatusCard({
         // Target only ever repeated the subtitle; the chip now earns its
         // place by appearing solely for a new record.
         chip={isNewPr ? 'New PR!' : undefined}
-        className={onSelect ? 'min-h-[24vh]' : 'min-h-[28vh]'}
+        className={onSelect ? 'min-h-[26vh]' : 'min-h-0 flex-1'}
       >
         {/* Sits on the photo, under the name and target. min-h (not h) on the
             card so opening the set breakdown grows the photo instead of
@@ -940,17 +942,23 @@ function SessionDock({
   const { hiddenByScreen: tabBarHidden } = useTabBarVisibility()
   return (
     // Sticky inside <main> (the scroller). With the tab bar hidden the dock
-    // drops into the space it vacated; otherwise it clears it. -mx-2 widens it
+    // runs all the way to the bottom edge and pads its own contents clear of
+    // the home indicator -- parking it above the indicator instead left a band
+    // of background under it. Otherwise it clears the tab bar. -mx-2 widens it
     // from the page's 16px gutter to the tab bar's 8px inset, so the two line
     // up. Wide screens have no tab bar either way.
     <div
       className={`sticky z-10 -mx-2 md:bottom-4 md:mx-0 ${
-        tabBarHidden
-          ? 'bottom-[calc(0.5rem+env(safe-area-inset-bottom))]'
-          : 'bottom-[calc(5.5rem+env(safe-area-inset-bottom))]'
+        tabBarHidden ? 'bottom-0' : 'bottom-[calc(5.5rem+env(safe-area-inset-bottom))]'
       }`}
     >
-      <div className="sticker animate-dialog-in flex flex-col gap-2 rounded-[var(--radius-card)] bg-surface p-2.5 shadow-[var(--shadow-lg)]">
+      <div
+          className={`sticker animate-dialog-in flex flex-col gap-2 rounded-t-[var(--radius-card)] bg-surface p-2.5 shadow-[var(--shadow-lg)] ${
+            tabBarHidden
+              ? 'rounded-b-[var(--radius-screen)] pb-[calc(0.625rem+env(safe-area-inset-bottom))]'
+              : 'rounded-b-[var(--radius-card)]'
+          }`}
+        >
         <div className="flex items-center gap-1.5">
           <p className="font-display text-[26px] font-black leading-none tabular-nums text-ink">
             {formatDuration(displaySec)}

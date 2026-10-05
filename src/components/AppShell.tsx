@@ -96,7 +96,11 @@ function AppShellInner() {
             key={location.pathname}
             className={`animate-page-in mx-auto w-full px-4 pt-6 md:px-8 md:pt-10 md:pb-18 ${
               tabBarHidden
-                ? 'pb-[calc(2.5rem+env(safe-area-inset-bottom))]'
+                // min-h-full so the session fills the scrollport: `sticky bottom-0`
+                  // only engages once the content is tall enough to scroll, and
+                  // without it the dock sat in flow with a band of background
+                  // beneath it on taller phones.
+                  ? 'flex min-h-full flex-col pb-0'
                 : 'pb-[calc(8.5rem+env(safe-area-inset-bottom))]'
             } ${
               location.pathname === '/workout' ? '' : 'max-w-3xl'
