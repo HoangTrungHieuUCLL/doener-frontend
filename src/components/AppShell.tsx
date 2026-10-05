@@ -1,24 +1,11 @@
 import { Glass } from '@samasante/liquid-glass'
-import type { ComponentType, SVGProps } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
-import { HistoryIcon, InsightsIcon, LogoMark, PlanIcon, TodayIcon, WorkoutIcon } from './icons'
-import { TabBarRevealZone, TabBarVisibilityProvider, useTabBarVisibility } from './TabBarVisibility'
+import { LogoMark } from './icons'
+import { NAV_ITEMS } from './navItems'
+import { FloatingNav } from './FloatingNav'
+import { TabBarVisibilityProvider, useTabBarVisibility } from './TabBarVisibility'
 
-interface NavItem {
-  to: string
-  label: string
-  Icon: ComponentType<SVGProps<SVGSVGElement>>
-}
-
-// Today sits in the middle of the row; Workout is the far-left tab.
-const NAV_ITEMS: NavItem[] = [
-  { to: '/workout', label: 'Workout', Icon: WorkoutIcon },
-  { to: '/plan', label: 'Plan', Icon: PlanIcon },
-  { to: '/today', label: 'Today', Icon: TodayIcon },
-  { to: '/history', label: 'History', Icon: HistoryIcon },
-  { to: '/insights', label: 'Insights', Icon: InsightsIcon },
-]
 
 function Wordmark({ size }: { size: 'sm' | 'md' }) {
   return (
@@ -40,8 +27,7 @@ export function AppShell() {
 function AppShellInner() {
   const { user, logout } = useAuth()
   const location = useLocation()
-  const { hiddenByScreen, revealed } = useTabBarVisibility()
-  const tabBarHidden = hiddenByScreen && !revealed
+  const { hiddenByScreen: tabBarHidden } = useTabBarVisibility()
 
   // Exactly one screen tall, with <main> as the only scroller: the page itself
   // never scrolls, so the header and bottom tab bar stay put instead of riding
@@ -140,7 +126,7 @@ function AppShellInner() {
             indicator, so a plain bottom-2 would float the bar (rounded corners
             included) into that exclusion zone. Requires viewport-fit=cover in
             index.html's viewport meta, or safe-area-inset-* is always 0. */}
-        <TabBarRevealZone />
+        <FloatingNav />
 
         <div
           className={`transition-[transform,opacity] duration-300 md:hidden ${

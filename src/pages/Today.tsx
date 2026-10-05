@@ -24,7 +24,7 @@ import { Input } from '../components/ui/Input'
 import { Card } from '../components/ui/Card'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { AddExerciseSheet } from '../components/AddExerciseSheet'
-import { useHideTabBar } from '../components/TabBarVisibility'
+import { useHideTabBar, useTabBarVisibility } from '../components/TabBarVisibility'
 import type { Placement } from '../components/AddExerciseSheet'
 import { ExerciseCard } from '../components/ui/ExerciseCard'
 import { Sparkline } from '../components/ui/Sparkline'
@@ -438,6 +438,7 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
           onCenteredChange={setSelectedId}
           scrollKey={scrollKey}
           isComplete={isComplete}
+          onAddExercise={() => setPicking(true)}
           sectionLabel={(ex) =>
             warmupIds.has(ex.id)
               ? 'Warm-up'
@@ -470,18 +471,6 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
         />
       )}
 
-      {/* Same frame, corners and height as the exercise cards above. */}
-      {/* Same frame, corners and height as the exercise cards above. */}
-      {workoutKey !== 'cardio' && workoutKey !== 'custom' && (
-        <button
-          type="button"
-          onClick={() => setPicking(true)}
-          className="sticker press h-14 w-full rounded-[var(--radius-card)] bg-surface px-2 font-display text-[13px] font-extrabold uppercase leading-tight tracking-[0.03em] text-ink"
-        >
-          + Add an exercise
-        </button>
-      )}
-
       {logTarget && (
         <SetLogDock
           key={logTarget.id}
@@ -507,6 +496,7 @@ function ExerciseCarousel({
   scrollKey,
   isComplete,
   sectionLabel,
+  onAddExercise,
   renderCard,
 }: {
   exercises: Exercise[]
@@ -516,6 +506,8 @@ function ExerciseCarousel({
   scrollKey: number
   isComplete: (ex: Exercise) => boolean
   sectionLabel: (ex: Exercise) => string
+  /** Opens the catalog picker; omitted where adding makes no sense. */
+  onAddExercise?: () => void
   renderCard: (ex: Exercise) => ReactNode
 }) {
   const trackRef = useRef<HTMLDivElement>(null)
@@ -566,15 +558,29 @@ function ExerciseCarousel({
           {centeredIndex + 1} of {exercises.length}
         </span>
       </div>
-      <div className="flex gap-1">
-        {exercises.map((ex, i) => (
-          <span
-            key={ex.id}
-            className={`h-1.5 flex-1 rounded-full border border-ink/20 ${
-              isComplete(ex) ? 'bg-positive' : i === centeredIndex ? 'bg-accent' : 'bg-surface'
-            }`}
-          />
-        ))}
+      <div className="flex items-center gap-2">
+        <div className="flex flex-1 gap-1">
+          {exercises.map((ex, i) => (
+            <span
+              key={ex.id}
+              className={`h-1.5 flex-1 rounded-full border border-ink/20 ${
+                isComplete(ex) ? 'bg-positive' : i === centeredIndex ? 'bg-accent' : 'bg-surface'
+              }`}
+            />
+          ))}
+        </div>
+        {onAddExercise && (
+          <button
+            type="button"
+            onClick={onAddExercise}
+            aria-label="Add an exercise"
+            className="sticker press flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface text-ink"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+              <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+            </svg>
+          </button>
+        )}
       </div>
       {/* -mx-4 + px-4 lets the cards bleed to the screen edges while the first
           and last still centre. */}
@@ -963,6 +969,7 @@ function SetLogDock({
   onClose?: () => void
 }) {
   const logSet = useLogSet()
+  const { hiddenByScreen: tabBarHidden } = useTabBarVisibility()
   // How many sets this confirm will record. Seeded from the plan's target, so
   // the common case is: set the weight, confirm once, exercise done.
   const [sets, setSets] = useState(exercise.sets)
@@ -997,10 +1004,17 @@ function SetLogDock({
   }
 
   return (
-    // Sticky inside <main> (the scroller), offset past the floating tab bar
-    // on phones; wide screens have no tab bar. -mx-2 widens it from the
-    // page's 16px gutter to the tab bar's 8px inset, so the two line up.
-    <div className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-10 -mx-2 md:bottom-4 md:mx-0">
+    // Sticky inside <main> (the scroller). With the tab bar hidden the dock
+    // drops into the space it vacated; otherwise it clears it. -mx-2 widens it
+    // from the page's 16px gutter to the tab bar's 8px inset, so the two line
+    // up. Wide screens have no tab bar either way.
+    <div
+      className={`sticky z-10 -mx-2 md:bottom-4 md:mx-0 ${
+        tabBarHidden
+          ? 'bottom-[calc(0.5rem+env(safe-area-inset-bottom))]'
+          : 'bottom-[calc(5.5rem+env(safe-area-inset-bottom))]'
+      }`}
+    >
       <div className="sticker animate-dialog-in flex flex-col gap-1.5 rounded-[var(--radius-card)] bg-surface p-2.5 shadow-[var(--shadow-lg)]">
         <div className="flex items-center gap-2">
           <p className="min-w-0 flex-1 truncate font-display text-[13px] font-black uppercase leading-none text-ink">
