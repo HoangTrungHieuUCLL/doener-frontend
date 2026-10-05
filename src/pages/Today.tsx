@@ -662,7 +662,9 @@ function Ruler({
         <span className="eyebrow text-[10px] text-ink-tertiary">{label}</span>
         <span className="font-display text-[22px] font-black leading-none tabular-nums text-ink">{round1(value)}</span>
       </div>
-      <div className="relative h-24 w-14">
+      {/* Scales with the screen: a fixed 9rem costs a short phone more
+          height than it has, a fixed 6rem left the last tick looking sliced. */}
+      <div className="relative h-[clamp(7rem,17vh,9rem)] w-14">
         <div
           ref={ref}
           role="slider"
@@ -948,7 +950,7 @@ function SessionDock({
     // from the page's 16px gutter to the tab bar's 8px inset, so the two line
     // up. Wide screens have no tab bar either way.
     <div
-      className={`sticky z-10 -mx-2 md:bottom-4 md:mx-0 ${
+      className={`sticky z-10 -mx-2 shrink-0 md:bottom-4 md:mx-0 ${
         tabBarHidden ? 'bottom-0' : 'bottom-[calc(5.5rem+env(safe-area-inset-bottom))]'
       }`}
     >
@@ -1088,7 +1090,9 @@ function SetLogDock({
       </div>
 
       {/* The rulers get the full width: three of them beside a fixed-width
-          button overflowed the row and pushed the button off the screen. */}
+          button overflowed the row and pushed the button off the screen. This
+          row is also the one that stretches, so spare height widens the ruler
+          window rather than inflating the photo above it. */}
       <div className="flex justify-center gap-3">
         {exercise.type === 'time' ? (
           inMinutes(exercise) ? (
