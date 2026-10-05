@@ -357,55 +357,10 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
 
   return (
     <div className="flex flex-col gap-6 pb-6">
-      <header className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-          <h1 className="headline text-[44px]">{WORKOUT_LABELS[workoutKey]}</h1>
-          <p>
-            <span className={`inline-flex items-center gap-1.5 rounded-full border-2 border-ink px-2 py-0.5 font-display text-[11px] font-extrabold uppercase tracking-[0.05em] ${isPaused ? 'bg-surface-alt text-ink' : 'bg-positive text-ink'}`}>
-              {isPaused ? 'Paused' : 'In progress'}
-            </span>
-          </p>
-        </div>
-        <div className="sticker flex items-center gap-3 rounded-[var(--radius-card)] bg-surface py-2 pl-4 pr-2">
-          <div className="flex-1">
-            <p className="eyebrow text-[11px] text-ink-tertiary">Elapsed</p>
-            <p className="font-display text-[34px] font-black leading-none tabular-nums text-ink">{formatDuration(displaySec)}</p>
-          </div>
-          <button
-            type="button"
-            onClick={togglePause}
-            aria-label={isPaused ? 'Resume workout' : 'Pause workout'}
-            className="tap-target press flex items-center justify-center rounded-full border-2 border-ink bg-surface text-[20px] font-bold text-ink shadow-[var(--shadow-pop)] hover:bg-highlight"
-          >
-            {isPaused ? (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            ) : (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
-              </svg>
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={() => setConfirmReset(true)}
-            aria-label="Reset workout"
-            className="tap-target press flex items-center justify-center rounded-full border-2 border-ink bg-surface text-[20px] font-bold text-ink shadow-[var(--shadow-pop)] hover:bg-highlight"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M3 12a9 9 0 1 1 3 6.7M3 12v5h5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            onClick={handleFinish}
-            disabled={finishSession.isPending}
-            className="tap-target press rounded-full border-2 border-ink bg-accent px-4 font-display text-[13px] font-extrabold uppercase tracking-[0.05em] text-white shadow-[var(--shadow-pop)] disabled:opacity-40"
-          >
-            {finishSession.isPending ? 'Finishing…' : 'Finish'}
-          </button>
-        </div>
+      {/* The clock, pause, reset and Finish now live in the dock, so the top
+          of the screen is just the title and the cards start higher. */}
+      <header>
+        <h1 className="headline text-[34px]">{WORKOUT_LABELS[workoutKey]}</h1>
       </header>
 
       {confirmReset && (
@@ -439,12 +394,10 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
           scrollKey={scrollKey}
           isComplete={isComplete}
           onAddExercise={() => setPicking(true)}
+          // Blank for the workout's own exercises: the heading already names
+          // it, and repeating it cost a line the cards could use.
           sectionLabel={(ex) =>
-            warmupIds.has(ex.id)
-              ? 'Warm-up'
-              : addedIds.has(ex.id)
-                ? 'Added'
-                : WORKOUT_LABELS[workoutKey]
+            warmupIds.has(ex.id) ? 'Warm-up' : addedIds.has(ex.id) ? 'Added' : ''
           }
           renderCard={(ex) => (
             <>
@@ -471,16 +424,28 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
         />
       )}
 
-      {logTarget && (
-        <SetLogDock
-          key={logTarget.id}
-          exercise={logTarget}
-          sessionId={sessionId}
-          setCount={setsDone(logTarget.id)}
-          lastSet={lastSetByExercise[logTarget.id] ?? null}
-          onLogged={(isNewPr) => handleSetLogged(logTarget.id, isNewPr)}
-          />
+      {workoutKey !== 'cardio' && (
+        <SessionDock
+          displaySec={displaySec}
+          isPaused={isPaused}
+          onTogglePause={togglePause}
+          onReset={() => setConfirmReset(true)}
+          onFinish={handleFinish}
+          finishPending={finishSession.isPending}
+        >
+          {logTarget && (
+            <SetLogDock
+              key={logTarget.id}
+              exercise={logTarget}
+              sessionId={sessionId}
+              setCount={setsDone(logTarget.id)}
+              lastSet={lastSetByExercise[logTarget.id] ?? null}
+              onLogged={(isNewPr) => handleSetLogged(logTarget.id, isNewPr)}
+            />
+          )}
+        </SessionDock>
       )}
+
     </div>
   )
 }
@@ -935,8 +900,10 @@ function ExerciseStatusCard({
         exerciseKey={exercise.key}
         title={exercise.name}
         subtitle={`${setCount} set${setCount === 1 ? '' : 's'} logged · ${targetLabel(exercise)}${exercise.per_side ? ' per side' : ''}`}
-        chip={isNewPr ? 'New PR!' : targetLabel(exercise)}
-        className={onSelect ? 'min-h-[28vh]' : 'min-h-[40vh]'}
+        // Target only ever repeated the subtitle; the chip now earns its
+        // place by appearing solely for a new record.
+        chip={isNewPr ? 'New PR!' : undefined}
+        className={onSelect ? 'min-h-[24vh]' : 'min-h-[28vh]'}
       >
         {/* Sits on the photo, under the name and target. min-h (not h) on the
             card so opening the set breakdown grows the photo instead of
@@ -949,9 +916,96 @@ function ExerciseStatusCard({
   )
 }
 
-/** The one set logger for the whole workout: rulers, Repeat last and Log set
- * for the exercise in focus (or the one tapped in the list), pinned just above
- * the tab bar while the page scrolls under it. */
+/** The bar pinned to the bottom for the whole workout: the session's clock and
+ * controls, and — when there is something to log against — the rulers and the
+ * one confirm. It is always mounted, so Finish stays reachable after the last
+ * exercise is done. */
+function SessionDock({
+  displaySec,
+  isPaused,
+  onTogglePause,
+  onReset,
+  onFinish,
+  finishPending,
+  children,
+}: {
+  displaySec: number
+  isPaused: boolean
+  onTogglePause: () => void
+  onReset: () => void
+  onFinish: () => void
+  finishPending: boolean
+  children?: ReactNode
+}) {
+  const { hiddenByScreen: tabBarHidden } = useTabBarVisibility()
+  return (
+    // Sticky inside <main> (the scroller). With the tab bar hidden the dock
+    // drops into the space it vacated; otherwise it clears it. -mx-2 widens it
+    // from the page's 16px gutter to the tab bar's 8px inset, so the two line
+    // up. Wide screens have no tab bar either way.
+    <div
+      className={`sticky z-10 -mx-2 md:bottom-4 md:mx-0 ${
+        tabBarHidden
+          ? 'bottom-[calc(0.5rem+env(safe-area-inset-bottom))]'
+          : 'bottom-[calc(5.5rem+env(safe-area-inset-bottom))]'
+      }`}
+    >
+      <div className="sticker animate-dialog-in flex flex-col gap-2 rounded-[var(--radius-card)] bg-surface p-2.5 shadow-[var(--shadow-lg)]">
+        <div className="flex items-center gap-1.5">
+          <p className="font-display text-[26px] font-black leading-none tabular-nums text-ink">
+            {formatDuration(displaySec)}
+          </p>
+          <span
+            className={`rounded-full border-2 border-ink px-1.5 py-px font-display text-[9px] font-extrabold uppercase tracking-[0.05em] ${
+              isPaused ? 'bg-surface-alt text-ink' : 'bg-positive text-ink'
+            }`}
+          >
+            {isPaused ? 'Paused' : 'On'}
+          </span>
+          <span className="flex-1" />
+          <button
+            type="button"
+            onClick={onTogglePause}
+            aria-label={isPaused ? 'Resume workout' : 'Pause workout'}
+            className="press flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-surface text-ink"
+          >
+            {isPaused ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
+              </svg>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={onReset}
+            aria-label="Reset workout"
+            className="press flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-surface text-ink"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M3 12a9 9 0 1 1 3 6.7M3 12v5h5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={onFinish}
+            disabled={finishPending}
+            className="press shrink-0 rounded-full border-2 border-ink bg-accent px-3 py-1.5 font-display text-[12px] font-extrabold uppercase tracking-[0.05em] text-white disabled:opacity-40"
+          >
+            {finishPending ? 'Finishing…' : 'Finish'}
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+/** Rulers and the single confirm for the exercise in the middle of the
+ * carousel. Rendered inside {@link SessionDock}. */
 function SetLogDock({
   exercise,
   sessionId,
@@ -965,11 +1019,10 @@ function SetLogDock({
   setCount: number
   lastSet: LastSet | null
   onLogged: (isNewPr: boolean) => void
-  /** Shown as a close button; focus mode has no way to close it. */
+  /** Shown as a close button where the logger can be dismissed. */
   onClose?: () => void
 }) {
   const logSet = useLogSet()
-  const { hiddenByScreen: tabBarHidden } = useTabBarVisibility()
   // How many sets this confirm will record. Seeded from the plan's target, so
   // the common case is: set the weight, confirm once, exercise done.
   const [sets, setSets] = useState(exercise.sets)
@@ -1004,82 +1057,68 @@ function SetLogDock({
   }
 
   return (
-    // Sticky inside <main> (the scroller). With the tab bar hidden the dock
-    // drops into the space it vacated; otherwise it clears it. -mx-2 widens it
-    // from the page's 16px gutter to the tab bar's 8px inset, so the two line
-    // up. Wide screens have no tab bar either way.
-    <div
-      className={`sticky z-10 -mx-2 md:bottom-4 md:mx-0 ${
-        tabBarHidden
-          ? 'bottom-[calc(0.5rem+env(safe-area-inset-bottom))]'
-          : 'bottom-[calc(5.5rem+env(safe-area-inset-bottom))]'
-      }`}
-    >
-      <div className="sticker animate-dialog-in flex flex-col gap-1.5 rounded-[var(--radius-card)] bg-surface p-2.5 shadow-[var(--shadow-lg)]">
-        <div className="flex items-center gap-2">
-          <p className="min-w-0 flex-1 truncate font-display text-[13px] font-black uppercase leading-none text-ink">
-            {exercise.name}
-          </p>
-          <span className="shrink-0 text-[11px] font-semibold text-ink-tertiary">
-            {setCount > 0 ? `${setCountLabel(setCount)} logged` : `Target ${targetLabel(exercise).replace('target ', '')}`}
-          </span>
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close set logger"
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-surface text-ink"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
-              </svg>
-            </button>
-          )}
-        </div>
-
-        {/* One row: rulers on the left, the two actions stacked on the right. */}
-        <div className="flex items-center gap-3">
-          <div className="flex flex-1 justify-center gap-3">
-            {exercise.type === 'time' ? (
-              inMinutes(exercise) ? (
-                <Ruler
-                  label="Minutes"
-                  value={Math.round(durationSec / 60)}
-                  step={1}
-                  max={180}
-                  majorEvery={5}
-                  labelEvery={10}
-                  onChange={(minutes) => setDurationSec(minutes * 60)}
-                />
-              ) : (
-                <Ruler
-                  label="Seconds"
-                  value={durationSec}
-                  step={5}
-                  max={300}
-                  majorEvery={15}
-                  labelEvery={30}
-                  onChange={setDurationSec}
-                />
-              )
-            ) : (
-              <>
-                {tracksWeight(exercise) && (
-                  <Ruler label="Kg" value={weight} step={1} max={200} majorEvery={5} labelEvery={10} onChange={setWeight} />
-                )}
-                <Ruler label="Reps" value={reps} step={1} max={50} majorEvery={5} labelEvery={5} onChange={setReps} />
-              </>
-            )}
-            <Ruler label="Sets" value={sets} step={1} min={1} max={12} majorEvery={1} labelEvery={1} onChange={setSets} />
-          </div>
-          <div className="flex w-24 shrink-0 flex-col gap-2">
-            <Button size="md" onClick={logAllSets} disabled={logSet.isPending || sets < 1}>
-              {logSet.isPending ? 'Logging…' : sets === 1 ? 'Log set' : `Log ${sets} sets`}
-            </Button>
-          </div>
-        </div>
+    <>
+      <div className="flex items-center gap-2 border-t-2 border-ink/10 pt-2">
+        <p className="min-w-0 flex-1 truncate font-display text-[13px] font-black uppercase leading-none text-ink">
+          {exercise.name}
+        </p>
+        <span className="shrink-0 text-[11px] font-semibold text-ink-tertiary">
+          {setCount > 0 ? `${setCountLabel(setCount)} logged` : `Target ${targetLabel(exercise).replace('target ', '')}`}
+        </span>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close set logger"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-surface text-ink"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+              <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+            </svg>
+          </button>
+        )}
       </div>
-    </div>
+
+      {/* The rulers get the full width: three of them beside a fixed-width
+          button overflowed the row and pushed the button off the screen. */}
+      <div className="flex justify-center gap-3">
+        {exercise.type === 'time' ? (
+          inMinutes(exercise) ? (
+            <Ruler
+              label="Minutes"
+              value={Math.round(durationSec / 60)}
+              step={1}
+              max={180}
+              majorEvery={5}
+              labelEvery={10}
+              onChange={(minutes) => setDurationSec(minutes * 60)}
+            />
+          ) : (
+            <Ruler
+              label="Seconds"
+              value={durationSec}
+              step={5}
+              max={300}
+              majorEvery={15}
+              labelEvery={30}
+              onChange={setDurationSec}
+            />
+          )
+        ) : (
+          <>
+            {tracksWeight(exercise) && (
+              <Ruler label="Kg" value={weight} step={1} max={200} majorEvery={5} labelEvery={10} onChange={setWeight} />
+            )}
+            <Ruler label="Reps" value={reps} step={1} max={50} majorEvery={5} labelEvery={5} onChange={setReps} />
+          </>
+        )}
+        <Ruler label="Sets" value={sets} step={1} min={1} max={12} majorEvery={1} labelEvery={1} onChange={setSets} />
+      </div>
+
+      <Button size="md" className="w-full" onClick={logAllSets} disabled={logSet.isPending}>
+        {logSet.isPending ? 'Logging…' : sets === 1 ? 'Log set' : `Log ${sets} sets`}
+      </Button>
+    </>
   )
 }
 

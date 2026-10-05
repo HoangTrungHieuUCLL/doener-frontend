@@ -196,7 +196,9 @@ export function FloatingNav() {
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         style={{ left: spot.x, top: spot.y, width: BUTTON, height: BUTTON }}
-        className={`sticker absolute z-40 flex touch-none items-center justify-center rounded-full bg-ink text-bg ${
+        // Border but no `sticker`: the offset drop shadow reads as grime on a
+        // control that floats over the content rather than sitting on it.
+        className={`absolute z-40 flex touch-none items-center justify-center rounded-full border-2 border-ink bg-ink text-bg ${
           dragging ? 'scale-105' : 'transition-transform'
         }`}
       >
