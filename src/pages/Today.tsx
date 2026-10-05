@@ -19,19 +19,19 @@ import type {
   SessionSetDetail,
   SessionWorkoutKey,
 } from '../api/types'
-import { RestTimer } from '../components/RestTimer'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Card } from '../components/ui/Card'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { AddExerciseSheet } from '../components/AddExerciseSheet'
-import { Overlay } from '../components/ui/Overlay'
+import { useHideTabBar } from '../components/TabBarVisibility'
 import type { Placement } from '../components/AddExerciseSheet'
 import { ExerciseCard } from '../components/ui/ExerciseCard'
 import { Sparkline } from '../components/ui/Sparkline'
-import { formatRelativeDay, todayISO } from '../lib/date'
+import { formatRelativeDay, parseUtcTimestamp, todayISO } from '../lib/date'
 import { formatDuration, useCountdown, usePausableStopwatch } from '../lib/useStopwatch'
 import { useLocalStorageState } from '../lib/useLocalStorageState'
+import { useAutoFinish, wasAutoFinished } from '../lib/useAutoFinish'
 import { CATALOG_SECTIONS, WORKOUT_LABELS, formatTimed, inMinutes, targetLabel, tracksWeight } from '../lib/workouts'
 import { buildSessionQueue } from '../lib/sessionQueue'
 import type { AddedExercise } from '../lib/sessionQueue'
@@ -104,7 +104,13 @@ export function Today() {
   }
 
   if (session.finished_at) {
-    return <FinishedSummary session={session} onStartNew={handleEndSession} />
+    return (
+      <FinishedSummary
+        session={session}
+        autoFinished={wasAutoFinished(session.id)}
+        onStartNew={handleEndSession}
+      />
+    )
   }
 
   return (
@@ -168,9 +174,13 @@ function StartButton({ label, onStart }: { label: string; onStart: () => void })
 
 function FinishedSummary({
   session,
+  autoFinished,
   onStartNew,
 }: {
   session: { total_volume_kg: number | null; workout_key: SessionWorkoutKey }
+  /** Ended by the idle timer rather than by hand -- say so, or it reads as a
+   *  workout the user does not remember finishing. */
+  autoFinished: boolean
   onStartNew: () => void
 }) {
   return (
@@ -182,7 +192,11 @@ function FinishedSummary({
       </div>
       <div>
         <h1 className="headline text-[44px]">Workout <span className="marker">complete</span></h1>
-        <p className="mt-3 text-[15px] text-ink-secondary">{WORKOUT_LABELS[session.workout_key]} is in the books.</p>
+        <p className="mt-3 text-[15px] text-ink-secondary">
+          {autoFinished
+            ? `${WORKOUT_LABELS[session.workout_key]} was wrapped up after 30 minutes without a set, timed to your last one.`
+            : `${WORKOUT_LABELS[session.workout_key]} is in the books.`}
+        </p>
       </div>
       {session.total_volume_kg !== null && (
         <Card className="w-full max-w-xs">
@@ -206,15 +220,15 @@ interface ActiveSessionProps {
 }
 
 function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises, onReset }: ActiveSessionProps) {
+  // A workout wants the whole screen; the nav swipes back up from the edge.
+  useHideTabBar()
   const { displaySec, activeSec, isPaused, toggle: togglePause } = usePausableStopwatch(startedAt)
   const finishSession = useFinishSession()
   // Excluding this session keeps "last time" meaning a previous workout,
   // even after sets have been logged here.
   const { data: lastSets } = useLastSets(sessionId)
   const { data: prs } = usePrStats()
-  const [restTimer, setRestTimer] = useState<{ key: number; durationSec: number } | null>(null)
   const [newPrIds, setNewPrIds] = useState<Record<number, boolean>>({})
-  const [viewMode, setViewMode] = useLocalStorageState<'focus' | 'list'>('doener.todayView', 'focus')
   const [confirmReset, setConfirmReset] = useState(false)
   // Scoped to this session: an exercise added today doesn't change the
   // workout itself. Kept in browser storage so it survives a reload before
@@ -224,14 +238,11 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
     [],
   )
   const [picking, setPicking] = useState(false)
-  const [listFilter, setListFilter] = useState<'remaining' | 'all'>('remaining')
-  // The exercise tapped in list mode (or picked in a custom workout): the one
-  // the set logger at the bottom logs against. Null hides the logger.
+  // Whatever the carousel has centred (or the exercise picked in a custom
+  // workout): the one the set logger at the bottom logs against.
   const [selectedId, setSelectedId] = useState<number | null>(null)
-  // Focus mode: an exercise chosen out of order via "Do another exercise".
-  // Falls back to the queue's own order once it has all its sets.
-  const [focusId, setFocusId] = useState<number | null>(null)
-  const [switching, setSwitching] = useState(false)
+  // Bumped when the app (not the finger) should move the carousel.
+  const [scrollKey, setScrollKey] = useState(0)
 
   async function handleReset() {
     await finishSession.mutateAsync({ sessionId, duration_sec: activeSec })
@@ -273,31 +284,18 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
   const warmupIds = useMemo(() => new Set(warmupExercises.map((e) => e.id)), [warmupExercises])
   const queueIds = useMemo(() => new Set(queue.map((e) => e.id)), [queue])
   const addedIds = useMemo(() => new Set(added.map((a) => a.exerciseId)), [added])
-  // Everything in the queue the workout itself didn't put there.
-  const extraExercises = useMemo(
-    () => queue.filter((e) => !warmupIds.has(e.id) && !mainExercises.some((m) => m.id === e.id)),
-    [queue, warmupIds, mainExercises],
-  )
-
-  // Derived purely from logged sets -- no separate "current exercise" state
-  // to keep in sync. The moment enough sets are logged for the exercise in
-  // front, the next incomplete one in the queue becomes current.
-  const currentIndex = useMemo(() => {
-    let i = 0
-    while (i < queue.length) {
-      const done = loggedSets.filter((s) => s.exercise_id === queue[i].id).length
-      if (done < queue[i].sets) break
-      i++
-    }
-    return i
-  }, [queue, loggedSets])
-
-  function handleSetLogged(exerciseId: number, restSec: number, isWarmup: boolean, isNewPr: boolean) {
+  function handleSetLogged(exerciseId: number, isNewPr: boolean) {
     if (isNewPr) {
       setNewPrIds((prev) => ({ ...prev, [exerciseId]: true }))
     }
-    if (!isWarmup && restSec > 0 && !isPaused) {
-      setRestTimer((prev) => ({ key: (prev?.key ?? 0) + 1, durationSec: restSec }))
+    touchActivity()
+    // The confirm finished this exercise, so move to the next one that still
+    // needs work. Computed against `exerciseId` rather than `isComplete`,
+    // which is still reading the set list from before this log landed.
+    const next = queue.find((e) => e.id !== exerciseId && !isComplete(e))
+    if (next) {
+      setSelectedId(next.id)
+      setScrollKey((k) => k + 1)
     }
   }
 
@@ -305,30 +303,36 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
     await finishSession.mutateAsync({ sessionId, duration_sec: activeSec })
   }
 
-  const setsDone = (id: number) => loggedSets.filter((s) => s.exercise_id === id).length
-  const isComplete = (ex: Exercise) => setsDone(ex.id) >= ex.sets
+  // Left alone for half an hour: close it out at the last set's time, so an
+  // abandoned session does not record the idle stretch as training.
+  const { touchActivity } = useAutoFinish({
+    sessionId,
+    startedAtMs: parseUtcTimestamp(startedAt).getTime(),
+    hasSets: loggedSets.length > 0,
+    onFinish: (durationSec) => {
+      finishSession.mutate({ sessionId, duration_sec: durationSec })
+    },
+  })
 
-  const chosen = focusId === null ? undefined : queue.find((e) => e.id === focusId)
-  const focusExercise =
-    chosen && !isComplete(chosen) ? chosen : currentIndex < queue.length ? queue[currentIndex] : null
-  const otherRemaining = queue.filter((e) => !isComplete(e) && e.id !== focusExercise?.id)
+  const setsDone = (id: number) => loggedSets.filter((s) => s.exercise_id === id).length
+  // One confirm logs every set of an exercise, so anything with a set on it is
+  // finished -- including when you chose fewer sets than the plan's target.
+  const isComplete = (ex: Exercise) => setsDone(ex.id) > 0
+
+  const firstRemaining = queue.find((e) => !isComplete(e)) ?? null
 
   // What the set logger at the bottom is logging against, if anything.
   const logTarget =
     workoutKey === 'cardio'
       ? null
-      : workoutKey === 'custom'
-        ? (exercises.find((e) => e.id === selectedId) ?? null)
-        : viewMode === 'focus'
-          ? focusExercise
-          : (queue.find((e) => e.id === selectedId) ?? null)
+      : (exercises.find((e) => e.id === selectedId) ?? (workoutKey === 'custom' ? null : firstRemaining))
 
   function handleAddExercise(exerciseId: number, placement: Placement) {
     setAdded((prev) => [
       ...prev,
       {
         exerciseId,
-        afterExerciseId: placement === 'next' ? (focusExercise?.id ?? null) : null,
+        afterExerciseId: placement === 'next' ? (logTarget?.id ?? null) : null,
       },
     ])
     setPicking(false)
@@ -340,8 +344,7 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
     if (selectedId === exerciseId) setSelectedId(null)
   }
 
-  const shown = (list: Exercise[]) => (listFilter === 'all' ? list : list.filter((e) => !isComplete(e)))
-  const statusCard = (ex: Exercise, props?: { selectable?: boolean }) => (
+  const statusCard = (ex: Exercise) => (
     <ExerciseStatusCard
       key={ex.id}
       exercise={ex}
@@ -349,16 +352,8 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
       lastSet={lastSetByExercise[ex.id] ?? null}
       best={bestByExercise[ex.id] ?? null}
       isNewPr={Boolean(newPrIds[ex.id])}
-      selected={props?.selectable ? selectedId === ex.id : undefined}
-      onSelect={props?.selectable ? () => setSelectedId(selectedId === ex.id ? null : ex.id) : undefined}
     />
   )
-
-  const listSections: { title: string; items: Exercise[] }[] = [
-    { title: 'Warm-up', items: shown(warmupExercises) },
-    { title: WORKOUT_LABELS[workoutKey], items: shown(mainExercises) },
-    { title: 'Added this session', items: shown(extraExercises) },
-  ].filter((section) => section.items.length > 0)
 
   return (
     <div className="flex flex-col gap-6 pb-6">
@@ -424,25 +419,6 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
         />
       )}
 
-      {workoutKey !== 'cardio' && workoutKey !== 'custom' && (
-        <SegmentedControl
-          options={[
-            { value: 'focus', label: 'Focus' },
-            { value: 'list', label: 'List' },
-          ]}
-          value={viewMode}
-          onChange={setViewMode}
-        />
-      )}
-
-      {restTimer && (
-        <RestTimer
-          restartKey={restTimer.key}
-          durationSec={restTimer.durationSec}
-          onDismiss={() => setRestTimer(null)}
-        />
-      )}
-
       {workoutKey === 'cardio' ? (
         <Section title="Cardio">
           <CardioForm sessionId={sessionId} />
@@ -455,84 +431,32 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
           onPick={setSelectedId}
           renderCard={(ex) => statusCard(ex)}
         />
-      ) : viewMode === 'list' ? (
-        <>
-          <SegmentedControl
-            size="sm"
-            options={[
-              { value: 'remaining', label: 'Remaining exercises' },
-              { value: 'all', label: 'All exercises' },
-            ]}
-            value={listFilter}
-            onChange={setListFilter}
-          />
-          {listSections.length === 0 ? (
-            <p className="headline py-6 text-center text-[28px]">All exercises done — ready to finish.</p>
-          ) : (
-            listSections.map(({ title, items }) => (
-              <Section key={title} title={title}>
-                {items.map((ex) =>
-                  addedIds.has(ex.id) ? (
-                    <div key={ex.id} className="flex flex-col gap-2">
-                      {statusCard(ex, { selectable: true })}
-                      <RemoveAddedButton
-                        exercise={ex}
-                        logged={loggedSets.some((s) => s.exercise_id === ex.id)}
-                        onRemove={() => handleRemoveAdded(ex.id)}
-                      />
-                    </div>
-                  ) : (
-                    statusCard(ex, { selectable: true })
-                  ),
-                )}
-              </Section>
-            ))
+      ) : queue.length === 0 ? null : (
+        <ExerciseCarousel
+          exercises={queue}
+          centeredId={logTarget?.id ?? null}
+          onCenteredChange={setSelectedId}
+          scrollKey={scrollKey}
+          isComplete={isComplete}
+          sectionLabel={(ex) =>
+            warmupIds.has(ex.id)
+              ? 'Warm-up'
+              : addedIds.has(ex.id)
+                ? 'Added'
+                : WORKOUT_LABELS[workoutKey]
+          }
+          renderCard={(ex) => (
+            <>
+              {statusCard(ex)}
+              {addedIds.has(ex.id) && (
+                <RemoveAddedButton
+                  exercise={ex}
+                  logged={loggedSets.some((st) => st.exercise_id === ex.id)}
+                  onRemove={() => handleRemoveAdded(ex.id)}
+                />
+              )}
+            </>
           )}
-        </>
-      ) : focusExercise ? (
-        <section className="flex flex-col gap-3">
-          <div className="eyebrow flex items-center justify-between text-[12px]">
-            <span>
-              {warmupIds.has(focusExercise.id)
-                ? 'Warm-up'
-                : addedIds.has(focusExercise.id)
-                  ? 'Added'
-                  : WORKOUT_LABELS[workoutKey]}
-            </span>
-            <span>
-              {queue.indexOf(focusExercise) + 1} of {queue.length}
-            </span>
-          </div>
-          <div className="h-3.5 w-full overflow-hidden rounded-full border-2 border-ink bg-surface">
-            <div
-              className="h-full border-r-2 border-ink bg-accent transition-all"
-              style={{ width: `${((queue.indexOf(focusExercise) + 1) / queue.length) * 100}%` }}
-            />
-          </div>
-          {statusCard(focusExercise)}
-          {addedIds.has(focusExercise.id) && (
-            <RemoveAddedButton
-              exercise={focusExercise}
-              logged={loggedSets.some((s) => s.exercise_id === focusExercise.id)}
-              onRemove={() => handleRemoveAdded(focusExercise.id)}
-            />
-          )}
-        </section>
-      ) : (
-        <p className="headline py-6 text-center text-[28px]">
-          All exercises done — ready to finish.
-        </p>
-      )}
-
-      {switching && (
-        <SwitchExerciseSheet
-          exercises={otherRemaining}
-          setsDone={setsDone}
-          onPick={(id) => {
-            setFocusId(id)
-            setSwitching(false)
-          }}
-          onClose={() => setSwitching(false)}
         />
       )}
 
@@ -540,32 +464,22 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
         <AddExerciseSheet
           exercises={exercises}
           inQueueIds={queueIds}
-          currentExerciseName={focusExercise?.name ?? null}
+          currentExerciseName={logTarget?.name ?? null}
           onAdd={handleAddExercise}
           onClose={() => setPicking(false)}
         />
       )}
 
       {/* Same frame, corners and height as the exercise cards above. */}
+      {/* Same frame, corners and height as the exercise cards above. */}
       {workoutKey !== 'cardio' && workoutKey !== 'custom' && (
-        <div className="flex gap-3">
-          {viewMode === 'focus' && otherRemaining.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setSwitching(true)}
-              className="sticker press h-14 flex-1 rounded-[var(--radius-card)] bg-surface px-2 font-display text-[13px] font-extrabold uppercase leading-tight tracking-[0.03em] text-ink"
-            >
-              Do another exercise
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => setPicking(true)}
-            className="sticker press h-14 flex-1 rounded-[var(--radius-card)] bg-surface px-2 font-display text-[13px] font-extrabold uppercase leading-tight tracking-[0.03em] text-ink"
-          >
-            + Add an exercise
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setPicking(true)}
+          className="sticker press h-14 w-full rounded-[var(--radius-card)] bg-surface px-2 font-display text-[13px] font-extrabold uppercase leading-tight tracking-[0.03em] text-ink"
+        >
+          + Add an exercise
+        </button>
       )}
 
       {logTarget && (
@@ -575,105 +489,116 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
           sessionId={sessionId}
           setCount={setsDone(logTarget.id)}
           lastSet={lastSetByExercise[logTarget.id] ?? null}
-          onLogged={(isNewPr) =>
-            handleSetLogged(logTarget.id, logTarget.rest_sec, warmupIds.has(logTarget.id), isNewPr)
-          }
-          onClose={viewMode === 'focus' && workoutKey !== 'custom' ? undefined : () => setSelectedId(null)}
-        />
+          onLogged={(isNewPr) => handleSetLogged(logTarget.id, isNewPr)}
+          />
       )}
     </div>
   )
 }
 
-/** Two-or-more-way pill toggle (Focus / List, Remaining / All). */
-function SegmentedControl<T extends string>({
-  options,
-  value,
-  onChange,
-  size = 'md',
-}: {
-  options: { value: T; label: string }[]
-  value: T
-  onChange: (next: T) => void
-  size?: 'md' | 'sm'
-}) {
-  return (
-    <div className="flex gap-1 rounded-full border-2 border-ink bg-surface p-1">
-      {options.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          onClick={() => onChange(option.value)}
-          aria-pressed={value === option.value}
-          className={`tap-target flex-1 rounded-full font-display font-extrabold uppercase tracking-[0.05em] transition-colors ${
-            size === 'sm' ? 'text-[11px]' : 'text-[13px]'
-          } ${value === option.value ? 'bg-ink text-bg' : 'text-ink-tertiary hover:text-ink'}`}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-/** Focus mode: jump to any exercise still left in the list, out of order. */
-function SwitchExerciseSheet({
+/** The workout as one horizontal, snapping strip of exercise cards. Whatever
+ * is centred is what the set logger below works on -- no tapping to select,
+ * because on a phone the swipe that brings a card into view is the same
+ * gesture that should choose it. */
+function ExerciseCarousel({
   exercises,
-  setsDone,
-  onPick,
-  onClose,
+  centeredId,
+  onCenteredChange,
+  scrollKey,
+  isComplete,
+  sectionLabel,
+  renderCard,
 }: {
   exercises: Exercise[]
-  setsDone: (exerciseId: number) => number
-  onPick: (exerciseId: number) => void
-  onClose: () => void
+  centeredId: number | null
+  onCenteredChange: (id: number) => void
+  /** Changes when the app wants the track moved to `centeredId` itself. */
+  scrollKey: number
+  isComplete: (ex: Exercise) => boolean
+  sectionLabel: (ex: Exercise) => string
+  renderCard: (ex: Exercise) => ReactNode
 }) {
+  const trackRef = useRef<HTMLDivElement>(null)
+  const centeredIndex = exercises.findIndex((e) => e.id === centeredId)
+  const centered = centeredIndex >= 0 ? exercises[centeredIndex] : null
+
+  // Report whichever card's middle is nearest the track's middle. Driven by
+  // scroll rather than IntersectionObserver so a half-swipe that settles back
+  // does not leave a different exercise selected than the one on screen.
+  function handleScroll() {
+    const track = trackRef.current
+    if (!track) return
+    const middle = track.scrollLeft + track.clientWidth / 2
+    let bestId: number | null = null
+    let bestDistance = Infinity
+    for (const child of Array.from(track.children) as HTMLElement[]) {
+      const id = Number(child.dataset.exerciseId)
+      if (!id) continue
+      const distance = Math.abs(child.offsetLeft + child.offsetWidth / 2 - middle)
+      if (distance < bestDistance) {
+        bestDistance = distance
+        bestId = id
+      }
+    }
+    if (bestId !== null && bestId !== centeredId) onCenteredChange(bestId)
+  }
+
+  // Centre the active card on mount (open on the thing to do, not on the
+  // warm-up already done) and whenever `scrollKey` says the app moved it.
+  // Never on a plain centre change -- that would fight the finger mid-swipe.
+  useEffect(() => {
+    const track = trackRef.current
+    if (!track || centeredIndex < 0) return
+    const child = track.children[centeredIndex] as HTMLElement | undefined
+    if (!child) return
+    track.scrollTo({
+      left: child.offsetLeft + child.offsetWidth / 2 - track.clientWidth / 2,
+      behavior: scrollKey === 0 ? ('instant' as ScrollBehavior) : 'smooth',
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scrollKey])
+
   return (
-    <Overlay onClose={onClose} align="bottom">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Do another exercise"
-        className="animate-dialog-in flex max-h-[85%] w-full max-w-md cursor-auto flex-col rounded-t-[var(--radius-card)] border-2 border-ink bg-bg shadow-[var(--shadow-lg)] sm:rounded-[var(--radius-card)]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="flex items-center justify-between gap-3 border-b-2 border-ink/10 p-4">
-          <p className="headline text-[26px]">
-            Do <span className="marker">another</span>
-          </p>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="tap-target press flex shrink-0 items-center justify-center rounded-full border-2 border-ink bg-surface text-ink shadow-[var(--shadow-pop)]"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-              <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
-            </svg>
-          </button>
-        </header>
-        <div className="grid grid-cols-2 gap-3 overflow-y-auto p-4">
-          {exercises.map((ex) => {
-            const done = setsDone(ex.id)
-            return (
-              <button key={ex.id} type="button" onClick={() => onPick(ex.id)} className="press text-left">
-                <ExerciseCard
-                  exerciseKey={ex.key}
-                  title={ex.name}
-                  subtitle={done > 0 ? `${done} of ${ex.sets} sets done` : targetLabel(ex)}
-                  className="aspect-[4/3]"
-                />
-              </button>
-            )
-          })}
-        </div>
+    <section className="flex flex-col gap-3">
+      <div className="eyebrow flex items-center justify-between text-[12px]">
+        <span>{centered ? sectionLabel(centered) : ''}</span>
+        <span>
+          {centeredIndex + 1} of {exercises.length}
+        </span>
       </div>
-    </Overlay>
+      <div className="flex gap-1">
+        {exercises.map((ex, i) => (
+          <span
+            key={ex.id}
+            className={`h-1.5 flex-1 rounded-full border border-ink/20 ${
+              isComplete(ex) ? 'bg-positive' : i === centeredIndex ? 'bg-accent' : 'bg-surface'
+            }`}
+          />
+        ))}
+      </div>
+      {/* -mx-4 + px-4 lets the cards bleed to the screen edges while the first
+          and last still centre. */}
+      <div
+        ref={trackRef}
+        onScroll={handleScroll}
+        className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {exercises.map((ex) => (
+          <div
+            key={ex.id}
+            data-exercise-id={ex.id}
+            className={`flex w-[86%] shrink-0 snap-center flex-col gap-2 transition-opacity ${
+              ex.id === centeredId ? 'opacity-100' : 'opacity-55'
+            }`}
+          >
+            {renderCard(ex)}
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }
 
-/** Added exercises can be taken back off the list, but only while nothing
- * has been logged against them -- a logged set is part of the record. */
 function RemoveAddedButton({
   exercise,
   logged,
@@ -1034,6 +959,9 @@ function SetLogDock({
   onClose?: () => void
 }) {
   const logSet = useLogSet()
+  // How many sets this confirm will record. Seeded from the plan's target, so
+  // the common case is: set the weight, confirm once, exercise done.
+  const [sets, setSets] = useState(exercise.sets)
   const [weight, setWeight] = useState(lastSet?.weight_kg ?? (exercise.equipment === 'bodyweight' ? 0 : 20))
   const [reps, setReps] = useState(lastSet?.reps ?? exercise.reps ?? 10)
   const [durationSec, setDurationSec] = useState(lastSet?.duration_sec ?? exercise.duration_sec ?? 30)
@@ -1048,28 +976,20 @@ function SetLogDock({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastSet?.exercise_id])
 
-  async function logCurrentValues() {
+  /** One confirm for the whole exercise: the chosen set count is recorded as
+   *  that many identical sets. The API takes one set per call, so they go up
+   *  in sequence -- each needs the set_number the one before it created. */
+  async function logAllSets() {
     const payload =
       exercise.type === 'time'
         ? { sessionId, exercise_id: exercise.id, duration_sec: durationSec }
         : { sessionId, exercise_id: exercise.id, weight_kg: tracksWeight(exercise) ? weight : undefined, reps }
-    const result = await logSet.mutateAsync(payload)
-    onLogged(result.is_new_pr)
-  }
-
-  async function repeatLastSet() {
-    if (!lastSet) return
-    const payload =
-      exercise.type === 'time'
-        ? { sessionId, exercise_id: exercise.id, duration_sec: lastSet.duration_sec ?? 0 }
-        : {
-            sessionId,
-            exercise_id: exercise.id,
-            weight_kg: tracksWeight(exercise) ? (lastSet.weight_kg ?? undefined) : undefined,
-            reps: lastSet.reps ?? undefined,
-          }
-    const result = await logSet.mutateAsync(payload)
-    onLogged(result.is_new_pr)
+    let anyNewPr = false
+    for (let i = 0; i < sets; i++) {
+      const result = await logSet.mutateAsync(payload)
+      anyNewPr = anyNewPr || result.is_new_pr
+    }
+    onLogged(anyNewPr)
   }
 
   return (
@@ -1083,7 +1003,7 @@ function SetLogDock({
             {exercise.name}
           </p>
           <span className="shrink-0 text-[11px] font-semibold text-ink-tertiary">
-            {setCount < exercise.sets ? `Set ${setCount + 1} of ${exercise.sets}` : 'Extra set'}
+            {setCount > 0 ? `${setCountLabel(setCount)} logged` : `Target ${targetLabel(exercise).replace('target ', '')}`}
           </span>
           {onClose && (
             <button
@@ -1132,16 +1052,12 @@ function SetLogDock({
                 <Ruler label="Reps" value={reps} step={1} max={50} majorEvery={5} labelEvery={5} onChange={setReps} />
               </>
             )}
+            <Ruler label="Sets" value={sets} step={1} max={12} majorEvery={1} labelEvery={1} onChange={setSets} />
           </div>
           <div className="flex w-24 shrink-0 flex-col gap-2">
-            <Button size="md" onClick={logCurrentValues} disabled={logSet.isPending}>
-              Log set
+            <Button size="md" onClick={logAllSets} disabled={logSet.isPending || sets < 1}>
+              {logSet.isPending ? 'Logging…' : sets === 1 ? 'Log set' : `Log ${sets} sets`}
             </Button>
-            {lastSet && (
-              <Button variant="secondary" size="md" onClick={repeatLastSet} disabled={logSet.isPending}>
-                Repeat
-              </Button>
-            )}
           </div>
         </div>
       </div>

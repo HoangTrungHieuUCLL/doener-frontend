@@ -3,6 +3,7 @@ import type { ComponentType, SVGProps } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { HistoryIcon, InsightsIcon, LogoMark, PlanIcon, TodayIcon, WorkoutIcon } from './icons'
+import { TabBarRevealZone, TabBarVisibilityProvider, useTabBarVisibility } from './TabBarVisibility'
 
 interface NavItem {
   to: string
@@ -29,8 +30,18 @@ function Wordmark({ size }: { size: 'sm' | 'md' }) {
 }
 
 export function AppShell() {
+  return (
+    <TabBarVisibilityProvider>
+      <AppShellInner />
+    </TabBarVisibilityProvider>
+  )
+}
+
+function AppShellInner() {
   const { user, logout } = useAuth()
   const location = useLocation()
+  const { hiddenByScreen, revealed } = useTabBarVisibility()
+  const tabBarHidden = hiddenByScreen && !revealed
 
   // Exactly one screen tall, with <main> as the only scroller: the page itself
   // never scrolls, so the header and bottom tab bar stay put instead of riding
@@ -97,7 +108,11 @@ export function AppShell() {
               every other page keeps a readable column. */}
           <div
             key={location.pathname}
-            className={`animate-page-in mx-auto w-full px-4 pt-6 pb-[calc(8.5rem+env(safe-area-inset-bottom))] md:px-8 md:pt-10 md:pb-18 ${
+            className={`animate-page-in mx-auto w-full px-4 pt-6 md:px-8 md:pt-10 md:pb-18 ${
+              tabBarHidden
+                ? 'pb-[calc(2.5rem+env(safe-area-inset-bottom))]'
+                : 'pb-[calc(8.5rem+env(safe-area-inset-bottom))]'
+            } ${
               location.pathname === '/workout' ? '' : 'max-w-3xl'
             }`}
           >
@@ -125,7 +140,13 @@ export function AppShell() {
             indicator, so a plain bottom-2 would float the bar (rounded corners
             included) into that exclusion zone. Requires viewport-fit=cover in
             index.html's viewport meta, or safe-area-inset-* is always 0. */}
-        <div className="md:hidden">
+        <TabBarRevealZone />
+
+        <div
+          className={`transition-[transform,opacity] duration-300 md:hidden ${
+            tabBarHidden ? 'pointer-events-none translate-y-[140%] opacity-0' : 'translate-y-0 opacity-100'
+          }`}
+        >
           <Glass
             className="sticker absolute inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-20 rounded-[var(--radius-card)]"
             // A thinner tint than --color-glass: the less milk, the more of the

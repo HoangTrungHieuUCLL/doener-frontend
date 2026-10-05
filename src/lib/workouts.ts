@@ -51,6 +51,9 @@ const REPS_ONLY_KEYS = new Set([
   'a_push_up',
   'custom_sit_up',
   'custom_burpee',
+  // The assist machine takes weight OFF you, so a heavier stack is an easier
+  // set -- tracking it would invert the personal record.
+  'custom_assisted_dip',
 ])
 
 /** Whether sets of this exercise record a weight. */
