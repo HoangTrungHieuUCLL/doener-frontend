@@ -640,6 +640,7 @@ function Ruler({
   label,
   value,
   step,
+  min = 0,
   max,
   majorEvery,
   labelEvery,
@@ -648,6 +649,8 @@ function Ruler({
   label: string
   value: number
   step: number
+  /** Lowest selectable value; the ruler cannot be scrolled below it. @default 0 */
+  min?: number
   max: number
   majorEvery: number
   labelEvery: number
@@ -658,19 +661,20 @@ function Ruler({
   // from the last set, arrow keys) moves the ruler; moving it for its own
   // reports would fight the finger mid-fling.
   const reported = useRef<number | null>(null)
-  const ticks = Math.floor(max / step)
-  const index = Math.round(value / step)
+  const ticks = Math.floor((max - min) / step)
+  const index = Math.round((value - min) / step)
+  const valueAt = (i: number) => round1(min + Math.min(ticks, Math.max(0, i)) * step)
 
   useEffect(() => {
     if (value === reported.current || !ref.current) return
-    ref.current.scrollTop = Math.round(value / step) * TICK_PX
-  }, [value, step])
+    ref.current.scrollTop = Math.round((value - min) / step) * TICK_PX
+  }, [value, step, min])
 
   function handleScroll() {
     if (!ref.current) return
     const next = Math.min(ticks, Math.max(0, Math.round(ref.current.scrollTop / TICK_PX)))
     if (next === index) return
-    reported.current = round1(next * step)
+    reported.current = valueAt(next)
     onChange(reported.current)
   }
 
@@ -678,7 +682,7 @@ function Ruler({
     const delta = { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1 }[e.key]
     if (delta === undefined) return
     e.preventDefault()
-    onChange(round1(Math.min(ticks, Math.max(0, index + delta)) * step))
+    onChange(valueAt(index + delta))
   }
 
   return (
@@ -694,17 +698,17 @@ function Ruler({
           tabIndex={0}
           aria-label={label}
           aria-orientation="vertical"
-          aria-valuemin={0}
+          aria-valuemin={min}
           aria-valuemax={max}
           aria-valuenow={value}
           onScroll={handleScroll}
           onKeyDown={handleKeyDown}
           className="flex h-full snap-y snap-mandatory flex-col overflow-y-auto overscroll-contain rounded-[var(--radius-control)] outline-offset-2 [mask-image:linear-gradient(transparent,black_25%,black_75%,transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {/* Half-height spacers let 0 and the max reach the center line. */}
+          {/* Half-height spacers let the min and the max reach the center line. */}
           <div className="shrink-0" style={{ height: `calc(50% - ${TICK_PX / 2}px)` }} />
           {Array.from({ length: ticks + 1 }, (_, i) => {
-            const tick = round1(i * step)
+            const tick = valueAt(i)
             return (
               <div key={i} className="relative flex h-3 w-full shrink-0 snap-center items-center">
                 <span className={`h-0.5 rounded-full ${tick % majorEvery === 0 ? 'w-6 bg-ink' : 'w-3 bg-ink/35'}`} />
@@ -1052,7 +1056,7 @@ function SetLogDock({
                 <Ruler label="Reps" value={reps} step={1} max={50} majorEvery={5} labelEvery={5} onChange={setReps} />
               </>
             )}
-            <Ruler label="Sets" value={sets} step={1} max={12} majorEvery={1} labelEvery={1} onChange={setSets} />
+            <Ruler label="Sets" value={sets} step={1} min={1} max={12} majorEvery={1} labelEvery={1} onChange={setSets} />
           </div>
           <div className="flex w-24 shrink-0 flex-col gap-2">
             <Button size="md" onClick={logAllSets} disabled={logSet.isPending || sets < 1}>
