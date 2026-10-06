@@ -548,11 +548,13 @@ function ExerciseCarousel({
         )}
       </div>
       {/* -mx-4 + px-4 lets the cards bleed to the screen edges while the first
-          and last still centre. */}
+          and last still centre. pb-2, not pb-1: overflow-x clips the y axis
+          too, and the card's 4px offset shadow sat flush against a 4px pad,
+          so sub-pixel rounding shaved it and the card read as cropped. */}
       <div
         ref={trackRef}
         onScroll={handleScroll}
-        className="-mx-4 flex min-h-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="-mx-4 flex min-h-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {exercises.map((ex) => (
           <div
@@ -662,9 +664,13 @@ function Ruler({
         <span className="eyebrow text-[10px] text-ink-tertiary">{label}</span>
         <span className="font-display text-[22px] font-black leading-none tabular-nums text-ink">{round1(value)}</span>
       </div>
-      {/* Scales with the screen: a fixed 9rem costs a short phone more
-          height than it has, a fixed 6rem left the last tick looking sliced. */}
-      <div className="relative h-[clamp(7rem,17vh,9rem)] w-14">
+      {/* The ruler is the only thing that can take height off the carousel:
+          the card is flex-1 and the dock is sized by its contents, so growing
+          the ruler is what shrinks the exercise photo. Steeper than plain vh
+          so a tall phone spends its extra height here rather than on the
+          photo, while a short one keeps the column from overflowing -- an
+          overflowing column puts the sticky dock over the card's bottom. */}
+      <div className="relative h-[clamp(6.5rem,calc(52vh_-_14rem),13.5rem)] w-14">
         <div
           ref={ref}
           role="slider"
@@ -955,9 +961,12 @@ function SessionDock({
       }`}
     >
       <div
+          // The home indicator does not need the whole 34pt inset under a
+          // bordered, full-width button; the full inset left a band of empty
+          // card under "Log set". max() keeps the normal padding elsewhere.
           className={`sticker animate-dialog-in flex flex-col gap-2 rounded-t-[var(--radius-card)] bg-surface p-2.5 shadow-[var(--shadow-lg)] ${
             tabBarHidden
-              ? 'rounded-b-[var(--radius-screen)] pb-[calc(0.625rem+env(safe-area-inset-bottom))]'
+              ? 'rounded-b-[var(--radius-screen)] pb-[max(0.625rem,calc(env(safe-area-inset-bottom)_-_0.875rem))]'
               : 'rounded-b-[var(--radius-card)]'
           }`}
         >
