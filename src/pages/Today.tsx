@@ -550,11 +550,16 @@ function ExerciseCarousel({
       {/* -mx-4 + px-4 lets the cards bleed to the screen edges while the first
           and last still centre. pb-2, not pb-1: overflow-x clips the y axis
           too, and the card's 4px offset shadow sat flush against a 4px pad,
-          so sub-pixel rounding shaved it and the card read as cropped. */}
+          so sub-pixel rounding shaved it and the card read as cropped.
+
+          max-h caps the photo instead of letting it swallow every spare
+          pixel. The section around it stays flex-1, so what the cap gives
+          up becomes clearance between the card and the dock rather than a
+          band of dead space under the dock. */}
       <div
         ref={trackRef}
         onScroll={handleScroll}
-        className="-mx-4 flex min-h-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="-mx-4 flex max-h-[23vh] min-h-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {exercises.map((ex) => (
           <div
