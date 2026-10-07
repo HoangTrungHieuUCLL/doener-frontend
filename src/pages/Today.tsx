@@ -550,16 +550,11 @@ function ExerciseCarousel({
       {/* -mx-4 + px-4 lets the cards bleed to the screen edges while the first
           and last still centre. pb-2, not pb-1: overflow-x clips the y axis
           too, and the card's 4px offset shadow sat flush against a 4px pad,
-          so sub-pixel rounding shaved it and the card read as cropped.
-
-          max-h caps the photo instead of letting it swallow every spare
-          pixel. The section around it stays flex-1, so what the cap gives
-          up becomes clearance between the card and the dock rather than a
-          band of dead space under the dock. */}
+          so sub-pixel rounding shaved it and the card read as cropped. */}
       <div
         ref={trackRef}
         onScroll={handleScroll}
-        className="-mx-4 flex max-h-[23vh] min-h-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="-mx-4 flex min-h-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {exercises.map((ex) => (
           <div
@@ -669,13 +664,10 @@ function Ruler({
         <span className="eyebrow text-[10px] text-ink-tertiary">{label}</span>
         <span className="font-display text-[22px] font-black leading-none tabular-nums text-ink">{round1(value)}</span>
       </div>
-      {/* The ruler is the only thing that can take height off the carousel:
-          the card is flex-1 and the dock is sized by its contents, so growing
-          the ruler is what shrinks the exercise photo. Steeper than plain vh
-          so a tall phone spends its extra height here rather than on the
-          photo, while a short one keeps the column from overflowing -- an
-          overflowing column puts the sticky dock over the card's bottom. */}
-      <div className="relative h-[clamp(6.5rem,calc(52vh_-_14rem),13.5rem)] w-14">
+      {/* Scales with the screen, but stays short: the dock is sized by its
+          contents, so every pixel here is one the panel adds to its own
+          height and, past the screen's, one it loses off the bottom. */}
+      <div className="relative h-[clamp(6rem,15vh,8.5rem)] w-14">
         <div
           ref={ref}
           role="slider"
@@ -955,25 +947,25 @@ function SessionDock({
   const { hiddenByScreen: tabBarHidden } = useTabBarVisibility()
   return (
     // Sticky inside <main> (the scroller). With the tab bar hidden the dock
-    // runs all the way to the bottom edge and pads its own contents clear of
-    // the home indicator -- parking it above the indicator instead left a band
-    // of background under it. Otherwise it clears the tab bar. -mx-2 widens it
-    // from the page's 16px gutter to the tab bar's 8px inset, so the two line
-    // up. Wide screens have no tab bar either way.
+    // floats clear of all three edges: -mx-2 widens it from the page's 16px
+    // gutter to the tab bar's 8px inset, so the two line up, and the bottom
+    // margin matches that inset, measured from the home indicator rather than
+    // from the glass. It is on both the margin and the sticky offset so the
+    // gap survives the dock pinning itself on a screen that has to scroll.
+    // Otherwise it clears the tab bar. Wide screens have no tab bar either way.
     <div
       className={`sticky z-10 -mx-2 shrink-0 md:bottom-4 md:mx-0 ${
-        tabBarHidden ? 'bottom-0' : 'bottom-[calc(5.5rem+env(safe-area-inset-bottom))]'
+        tabBarHidden
+          ? 'mb-[calc(0.5rem+env(safe-area-inset-bottom))] bottom-[calc(0.5rem+env(safe-area-inset-bottom))]'
+          : 'bottom-[calc(5.5rem+env(safe-area-inset-bottom))]'
       }`}
     >
       <div
-          // The home indicator does not need the whole 34pt inset under a
-          // bordered, full-width button; the full inset left a band of empty
-          // card under "Log set". max() keeps the normal padding elsewhere.
-          className={`sticker animate-dialog-in flex flex-col gap-2 rounded-t-[var(--radius-card)] bg-surface p-2.5 shadow-[var(--shadow-lg)] ${
-            tabBarHidden
-              ? 'rounded-b-[var(--radius-screen)] pb-[max(0.625rem,calc(env(safe-area-inset-bottom)_-_0.875rem))]'
-              : 'rounded-b-[var(--radius-card)]'
-          }`}
+          // Inset equally on all four sides now that it floats, rather than
+          // squaring off against the screen's bottom edge: the -mx-2 above
+          // sets the side inset, and the matching bottom margin keeps the
+          // panel the same distance clear of the home indicator.
+          className="sticker animate-dialog-in flex flex-col gap-2 rounded-[var(--radius-card)] bg-surface p-2.5 shadow-[var(--shadow-lg)]"
         >
         <div className="flex items-center gap-1.5">
           <p className="font-display text-[26px] font-black leading-none tabular-nums text-ink">
