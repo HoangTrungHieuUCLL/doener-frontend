@@ -947,25 +947,27 @@ function SessionDock({
   const { hiddenByScreen: tabBarHidden } = useTabBarVisibility()
   return (
     // Sticky inside <main> (the scroller). With the tab bar hidden the dock
-    // floats clear of all three edges: -mx-2 widens it from the page's 16px
-    // gutter to the tab bar's 8px inset, so the two line up, and the bottom
-    // margin matches that inset, measured from the home indicator rather than
-    // from the glass. It is on both the margin and the sticky offset so the
-    // gap survives the dock pinning itself on a screen that has to scroll.
-    // Otherwise it clears the tab bar. Wide screens have no tab bar either way.
+    // floats on the same 8px inset all round: -mx-2 widens it from the page's
+    // 16px gutter to the tab bar's 8px inset, so the two line up, and mb-2
+    // matches that below. The margin stays clear of the home indicator; the
+    // panel's own bottom padding does that, so the inset does not have to
+    // carry it and leave a band of background under the card. On both the
+    // margin and the sticky offset, so the gap survives the dock pinning
+    // itself on a screen that has to scroll. Otherwise it clears the tab bar.
+    // Wide screens have no tab bar either way.
     <div
       className={`sticky z-10 -mx-2 shrink-0 md:bottom-4 md:mx-0 ${
-        tabBarHidden
-          ? 'mb-[calc(0.5rem+env(safe-area-inset-bottom))] bottom-[calc(0.5rem+env(safe-area-inset-bottom))]'
-          : 'bottom-[calc(5.5rem+env(safe-area-inset-bottom))]'
+        tabBarHidden ? 'mb-2 bottom-2' : 'bottom-[calc(5.5rem+env(safe-area-inset-bottom))]'
       }`}
     >
       <div
-          // Inset equally on all four sides now that it floats, rather than
-          // squaring off against the screen's bottom edge: the -mx-2 above
-          // sets the side inset, and the matching bottom margin keeps the
-          // panel the same distance clear of the home indicator.
-          className="sticker animate-dialog-in flex flex-col gap-2 rounded-[var(--radius-card)] bg-surface p-2.5 shadow-[var(--shadow-lg)]"
+          // The home indicator covers the screen's bottom 34pt, of which the
+          // 8px margin below accounts for one; the rest is padding, so "Log
+          // set" stays out from under the indicator while the card itself
+          // still reaches down to the same inset as its left and right.
+          className={`sticker animate-dialog-in flex flex-col gap-2 rounded-[var(--radius-card)] bg-surface p-2.5 shadow-[var(--shadow-lg)] ${
+            tabBarHidden ? 'pb-[max(0.625rem,calc(env(safe-area-inset-bottom)_-_0.5rem))]' : ''
+          }`}
         >
         <div className="flex items-center gap-1.5">
           <p className="font-display text-[26px] font-black leading-none tabular-nums text-ink">
