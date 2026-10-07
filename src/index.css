@@ -71,17 +71,13 @@
 
 html {
   color-scheme: light;
-  /* The app's full height. Installed to the iOS home screen (viewport-fit=cover
-     + black-translucent status bar), 100dvh, 100svh and 100% all come up short
-     by the status-bar height, leaving a blank strip at the bottom and lifting
-     anything pinned there. Only 100lvh covers the whole screen in that mode. */
+  /* The app's full height, as a fallback only: lib/appHeight.ts overwrites this
+     with the measured pixel height before the first render, and on every resize.
+     Installed to the iOS home screen no viewport unit is right -- 100dvh/100svh
+     come up short by the status bar and 100lvh overshoots by it -- so the one
+     kept here is the one whose failure is harmless: short leaves a little
+     background showing, long drops the set logger off the bottom edge. */
   --app-h: 100dvh;
-}
-
-@media (display-mode: standalone) {
-  html {
-    --app-h: 100lvh;
-  }
 }
 
 body {
