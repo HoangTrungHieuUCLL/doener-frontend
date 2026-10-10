@@ -34,6 +34,7 @@ import { useLocalStorageState } from '../lib/useLocalStorageState'
 import { useAutoFinish, wasAutoFinished } from '../lib/useAutoFinish'
 import { CATALOG_SECTIONS, WORKOUT_LABELS, formatTimed, inMinutes, targetLabel, tracksWeight } from '../lib/workouts'
 import { buildSessionQueue } from '../lib/sessionQueue'
+import { seedFromHistory } from '../lib/setSeed'
 import type { AddedExercise } from '../lib/sessionQueue'
 
 function isSessionWorkoutKey(key: string | undefined | null): key is SessionWorkoutKey {
@@ -328,14 +329,22 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
       : (exercises.find((e) => e.id === selectedId) ?? (workoutKey === 'custom' ? null : firstRemaining))
 
   function handleAddExercise(exerciseId: number, placement: Placement) {
+    const anchored = placement !== 'end' && logTarget !== null
     setAdded((prev) => [
       ...prev,
       {
         exerciseId,
-        afterExerciseId: placement === 'next' ? (logTarget?.id ?? null) : null,
+        anchorExerciseId: anchored ? logTarget.id : null,
+        side: placement === 'now' ? 'before' : 'after',
       },
     ])
     setPicking(false)
+    // "Do it now" means now: centre the carousel on it so the set logger is
+    // already pointed at the new exercise rather than the one it displaced.
+    if (placement === 'now' && anchored) {
+      setSelectedId(exerciseId)
+      setScrollKey((k) => k + 1)
+    }
   }
 
   // Only removable until it has sets: once logged, it is part of the record.
@@ -440,6 +449,7 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
               sessionId={sessionId}
               setCount={setsDone(logTarget.id)}
               lastSet={lastSetByExercise[logTarget.id] ?? null}
+              sessionSets={loggedSets.filter((s) => s.exercise_id === logTarget.id)}
               onLogged={(isNewPr) => handleSetLogged(logTarget.id, isNewPr)}
             />
           )}
@@ -1029,6 +1039,7 @@ function SetLogDock({
   sessionId,
   setCount,
   lastSet,
+  sessionSets,
   onLogged,
   onClose,
 }: {
@@ -1036,25 +1047,29 @@ function SetLogDock({
   sessionId: number
   setCount: number
   lastSet: LastSet | null
+  /** This session's sets for this exercise, which outrank the last session's. */
+  sessionSets: SessionSetDetail[]
   onLogged: (isNewPr: boolean) => void
   /** Shown as a close button where the logger can be dismissed. */
   onClose?: () => void
 }) {
   const logSet = useLogSet()
-  // How many sets this confirm will record. Seeded from the plan's target, so
-  // the common case is: set the weight, confirm once, exercise done.
-  const [sets, setSets] = useState(exercise.sets)
-  const [weight, setWeight] = useState(lastSet?.weight_kg ?? (exercise.equipment === 'bodyweight' ? 0 : 20))
-  const [reps, setReps] = useState(lastSet?.reps ?? exercise.reps ?? 10)
-  const [durationSec, setDurationSec] = useState(lastSet?.duration_sec ?? exercise.duration_sec ?? 30)
+  // Every ruler opens where the lifter actually was, with the plan's target
+  // only as a fallback -- see seedFromHistory for which source wins.
+  const seed = seedFromHistory(exercise, lastSet, sessionSets)
+  const [sets, setSets] = useState(seed.sets)
+  const [weight, setWeight] = useState(seed.weightKg)
+  const [reps, setReps] = useState(seed.reps)
+  const [durationSec, setDurationSec] = useState(seed.durationSec)
 
   // Re-seed once lastSet finishes loading (it starts null on first render).
   useEffect(() => {
-    if (lastSet) {
-      if (lastSet.weight_kg !== null) setWeight(lastSet.weight_kg)
-      if (lastSet.reps !== null) setReps(lastSet.reps)
-      if (lastSet.duration_sec !== null) setDurationSec(lastSet.duration_sec)
-    }
+    if (!lastSet) return
+    const late = seedFromHistory(exercise, lastSet, sessionSets)
+    setWeight(late.weightKg)
+    setReps(late.reps)
+    setDurationSec(late.durationSec)
+    setSets(late.sets)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastSet?.exercise_id])
 

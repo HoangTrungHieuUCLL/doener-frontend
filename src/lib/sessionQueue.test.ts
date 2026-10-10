@@ -102,3 +102,59 @@ describe('buildSessionQueue', () => {
     expect(ids(base)).toEqual([1, 2, 3])
   })
 })
+
+describe('buildSessionQueue: slotting an exercise in ahead of another', () => {
+  it('puts it before its anchor, pushing that one back a place', () => {
+    const queue = buildSessionQueue(
+      [exercise(1), exercise(2), exercise(3)],
+      [{ exerciseId: 4, anchorExerciseId: 2, side: 'before' }],
+      [],
+      [exercise(1), exercise(2), exercise(3), exercise(4)],
+    )
+    expect(queue.map((e) => e.id)).toEqual([1, 4, 2, 3])
+  })
+
+  it('can slot in ahead of the very first exercise', () => {
+    const queue = buildSessionQueue(
+      [exercise(1), exercise(2)],
+      [{ exerciseId: 9, anchorExerciseId: 1, side: 'before' }],
+      [],
+      [exercise(1), exercise(2), exercise(9)],
+    )
+    expect(queue.map((e) => e.id)).toEqual([9, 1, 2])
+  })
+
+  it('still reads entries stored before the option existed as "after"', () => {
+    const queue = buildSessionQueue(
+      [exercise(1), exercise(2)],
+      [{ exerciseId: 7, afterExerciseId: 1 }],
+      [],
+      [exercise(1), exercise(2), exercise(7)],
+    )
+    expect(queue.map((e) => e.id)).toEqual([1, 7, 2])
+  })
+
+  it('sends it to the end when its anchor is no longer in the queue', () => {
+    // Not to the front, which a -1 index would give a naive "before" splice.
+    const queue = buildSessionQueue(
+      [exercise(1), exercise(2)],
+      [{ exerciseId: 5, anchorExerciseId: 99, side: 'before' }],
+      [],
+      [exercise(1), exercise(2), exercise(5)],
+    )
+    expect(queue.map((e) => e.id)).toEqual([1, 2, 5])
+  })
+
+  it('keeps both orderings straight when they stack up', () => {
+    const queue = buildSessionQueue(
+      [exercise(1), exercise(2)],
+      [
+        { exerciseId: 3, anchorExerciseId: 2, side: 'before' },
+        { exerciseId: 4, anchorExerciseId: 2, side: 'after' },
+      ],
+      [],
+      [exercise(1), exercise(2), exercise(3), exercise(4)],
+    )
+    expect(queue.map((e) => e.id)).toEqual([1, 3, 2, 4])
+  })
+})

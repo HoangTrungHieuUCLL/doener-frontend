@@ -5,7 +5,9 @@ import { ExerciseCard } from './ui/ExerciseCard'
 import { Overlay } from './ui/Overlay'
 import { CATALOG_SECTIONS, targetLabel } from '../lib/workouts'
 
-export type Placement = 'next' | 'end'
+/** Where an added exercise lands relative to the one in progress. 'now'
+ * slots it in ahead, pushing the current one back a place. */
+export type Placement = 'now' | 'next' | 'end'
 
 /** Pick any exercise from the catalog and drop it into the session in
  * progress, either as the next thing to do or as extra work at the end. */
@@ -81,6 +83,19 @@ export function AddExerciseSheet({
             />
             <div className="flex flex-col gap-2">
               <Button
+                size="md"
+                onClick={() => onAdd(picked.id, 'now')}
+                disabled={currentExerciseName === null}
+              >
+                Do it now
+              </Button>
+              {currentExerciseName !== null && (
+                <p className="-mt-1 text-center text-[12px] text-ink-tertiary">
+                  {currentExerciseName} moves after it
+                </p>
+              )}
+              <Button
+                variant="secondary"
                 size="md"
                 onClick={() => onAdd(picked.id, 'next')}
                 disabled={currentExerciseName === null}
