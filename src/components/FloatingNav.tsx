@@ -1,23 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { PointerEvent as ReactPointerEvent } from 'react'
+import type { ComponentType, PointerEvent as ReactPointerEvent, SVGProps } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { NAV_ITEMS } from './navItems'
 import { useTabBarVisibility } from './TabBarVisibility'
+import { useSessionActionsValue } from './SessionActions'
+import { clampSpot, fanPositions } from '../lib/fanLayout'
+import type { FanGeometry, Point as Spot } from '../lib/fanLayout'
 
 const STORAGE_KEY = 'doener.floatingNav'
-const BUTTON = 52
-const EDGE_GAP = 10
-/** How far the icons sit from the button's centre when fanned out. */
-const RADIUS = 78
-/** Total sweep of the fan; the icons are spread evenly across it. */
-const ARC_DEG = 160
+/** Sized for eight: the five nav icons plus the three session controls the
+ * workout screen lends it. The radius is what keeps them from overlapping at
+ * that count -- see fanLayout for the arithmetic, and its tests. */
+const FAN: FanGeometry = { button: 52, icon: 40, radius: 112, arcDeg: 176, edgeGap: 10 }
+const BUTTON = FAN.button
+const EDGE_GAP = FAN.edgeGap
 /** Movement beyond this is a drag, not a tap. */
 const DRAG_SLOP = 8
-
-interface Spot {
-  x: number
-  y: number
-}
 
 function loadSpot(): Spot | null {
   try {
@@ -44,8 +42,15 @@ function loadSpot(): Spot | null {
  * exactly one screen tall and does not scroll, and `fixed` would resolve
  * against the shell's transformed page wrapper anyway (see Overlay.tsx).
  */
+function Icon({ item }: { item: { Icon: ComponentType<SVGProps<SVGSVGElement>> } }) {
+  return <item.Icon className="h-5 w-5" strokeWidth={2.1} />
+}
+
 export function FloatingNav() {
   const { hiddenByScreen } = useTabBarVisibility()
+  // Whatever the open screen has lent the fan -- the workout's clock controls.
+  // They come first so they land nearest the thumb, below the nav icons.
+  const sessionActions = useSessionActionsValue()
   const navigate = useNavigate()
   const hostRef = useRef<HTMLDivElement>(null)
   const [spot, setSpot] = useState<Spot | null>(null)
@@ -61,16 +66,7 @@ export function FloatingNav() {
     const host = hostRef.current?.parentElement
     if (!host) return next
     const { width, height } = host.getBoundingClientRect()
-    const maxX = width - BUTTON - EDGE_GAP
-    // The fan needs vertical room on both sides of the button, or icons would
-    // land off screen where they cannot be tapped.
-    const minY = Math.min(RADIUS, height / 2 - BUTTON)
-    const maxY = height - BUTTON - Math.min(RADIUS, height / 2 - BUTTON)
-    const x = Math.min(maxX, Math.max(EDGE_GAP, next.x))
-    const y = Math.min(Math.max(maxY, minY), Math.max(minY, next.y))
-    if (!snapToEdge) return { x, y }
-    // Settle against whichever side is nearer, so it never floats mid-screen.
-    return { x: x + BUTTON / 2 < width / 2 ? EDGE_GAP : maxX, y }
+    return clampSpot(next, { width, height }, snapToEdge, FAN)
   }, [])
 
   // Track the shell's width for the clamp and the fan direction.
@@ -145,8 +141,26 @@ export function FloatingNav() {
 
   // Fan away from whichever edge it is parked against.
   const opensRight = hostWidth === 0 || spot.x + BUTTON / 2 < hostWidth / 2
-  const centreDeg = opensRight ? 0 : 180
-  const stepDeg = ARC_DEG / (NAV_ITEMS.length - 1)
+  const items = [
+    ...sessionActions.map((a) => ({
+      key: `action:${a.id}`,
+      label: a.label,
+      Icon: a.Icon,
+      danger: a.tone === 'danger',
+      disabled: a.disabled ?? false,
+      run: a.onSelect,
+    })),
+    ...NAV_ITEMS.map(({ to, label, Icon }) => ({
+      key: `nav:${to}`,
+      label,
+      Icon,
+      danger: false,
+      disabled: false,
+      run: () => navigate(to),
+    })),
+  ]
+  const positions = fanPositions(spot, items.length, opensRight, FAN)
+  const parked = { x: spot.x + BUTTON / 2 - FAN.icon / 2, y: spot.y + BUTTON / 2 - FAN.icon / 2 }
 
   return (
     <div ref={hostRef} className="md:hidden">
@@ -160,32 +174,30 @@ export function FloatingNav() {
         />
       )}
 
-      {NAV_ITEMS.map(({ to, label, Icon }, i) => {
-        const angle = ((centreDeg - ARC_DEG / 2 + i * stepDeg) * Math.PI) / 180
-        const x = spot.x + BUTTON / 2 + Math.cos(angle) * RADIUS - 22
-        const y = spot.y + BUTTON / 2 + Math.sin(angle) * RADIUS - 22
-        return (
-          <button
-            key={to}
-            type="button"
-            aria-label={label}
-            tabIndex={open ? 0 : -1}
-            onClick={() => {
-              setOpen(false)
-              navigate(to)
-            }}
-            style={{
-              left: open ? x : spot.x + BUTTON / 2 - 22,
-              top: open ? y : spot.y + BUTTON / 2 - 22,
-            }}
-            className={`sticker absolute z-30 flex h-11 w-11 items-center justify-center rounded-full bg-surface text-ink transition-[left,top,opacity,transform] duration-200 ${
-              open ? 'scale-100 opacity-100' : 'pointer-events-none scale-50 opacity-0'
-            }`}
-          >
-            <Icon className="h-5 w-5" strokeWidth={2.1} />
-          </button>
-        )
-      })}
+      {items.map((item, i) => (
+        <button
+          key={item.key}
+          type="button"
+          aria-label={item.label}
+          tabIndex={open ? 0 : -1}
+          disabled={item.disabled}
+          onClick={() => {
+            setOpen(false)
+            item.run()
+          }}
+          style={{
+            left: open ? positions[i].x : parked.x,
+            top: open ? positions[i].y : parked.y,
+            width: FAN.icon,
+            height: FAN.icon,
+          }}
+          className={`sticker absolute z-30 flex items-center justify-center rounded-full transition-[left,top,opacity,transform] duration-200 disabled:opacity-40 ${
+            item.danger ? 'bg-accent text-white' : 'bg-surface text-ink'
+          } ${open ? 'scale-100 opacity-100' : 'pointer-events-none scale-50 opacity-0'}`}
+        >
+          <Icon item={item} />
+        </button>
+      ))}
 
       <button
         type="button"

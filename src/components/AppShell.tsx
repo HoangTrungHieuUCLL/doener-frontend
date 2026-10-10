@@ -5,6 +5,7 @@ import { LogoMark } from './icons'
 import { NAV_ITEMS } from './navItems'
 import { FloatingNav } from './FloatingNav'
 import { TabBarVisibilityProvider, useTabBarVisibility } from './TabBarVisibility'
+import { SessionActionsProvider } from './SessionActions'
 
 
 function Wordmark({ size }: { size: 'sm' | 'md' }) {
@@ -19,7 +20,9 @@ function Wordmark({ size }: { size: 'sm' | 'md' }) {
 export function AppShell() {
   return (
     <TabBarVisibilityProvider>
-      <AppShellInner />
+      <SessionActionsProvider>
+        <AppShellInner />
+      </SessionActionsProvider>
     </TabBarVisibilityProvider>
   )
 }

@@ -82,3 +82,40 @@ export function LogoMark(props: IconProps) {
     </svg>
   )
 }
+
+/** Clock controls the workout screen lends to the floating nav. The two
+ * filled glyphs override the shared outline style rather than inherit it. */
+const solid = { ...base, fill: 'currentColor', stroke: 'none' }
+
+export function PauseIcon(props: IconProps) {
+  return (
+    <svg {...solid} {...props} strokeWidth={0}>
+      <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
+    </svg>
+  )
+}
+
+export function PlayIcon(props: IconProps) {
+  return (
+    <svg {...solid} {...props} strokeWidth={0}>
+      <path d="M8 5v14l11-7z" />
+    </svg>
+  )
+}
+
+export function ResetIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M3 12a9 9 0 1 1 3 6.7M3 12v5h5" />
+    </svg>
+  )
+}
+
+/** A chequered-flag silhouette: the session is over, not merely ticked off. */
+export function FinishIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M5 21V4M5 5h12l-2.2 3.6L17 12H5" />
+    </svg>
+  )
+}

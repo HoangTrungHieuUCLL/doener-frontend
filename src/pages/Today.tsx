@@ -35,6 +35,8 @@ import { useAutoFinish, wasAutoFinished } from '../lib/useAutoFinish'
 import { CATALOG_SECTIONS, WORKOUT_LABELS, formatTimed, inMinutes, targetLabel, tracksWeight } from '../lib/workouts'
 import { buildSessionQueue } from '../lib/sessionQueue'
 import { seedFromHistory } from '../lib/setSeed'
+import { useSessionActions } from '../components/SessionActions'
+import { FinishIcon, PauseIcon, PlayIcon, ResetIcon } from '../components/icons'
 import type { AddedExercise } from '../lib/sessionQueue'
 
 function isSessionWorkoutKey(key: string | undefined | null): key is SessionWorkoutKey {
@@ -304,6 +306,35 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
     await finishSession.mutateAsync({ sessionId, duration_sec: activeSec })
   }
 
+  // The clock controls ride on the floating button rather than the dock, so
+  // the thumb reaches them wherever it has parked it. Registered for as long
+  // as the session is open, the way the tab bar is hidden for it.
+  useSessionActions(
+    useMemo(
+      () => [
+        {
+          id: 'pause',
+          label: isPaused ? 'Resume workout' : 'Pause workout',
+          Icon: isPaused ? PlayIcon : PauseIcon,
+          onSelect: togglePause,
+        },
+        { id: 'reset', label: 'Reset workout', Icon: ResetIcon, onSelect: () => setConfirmReset(true) },
+        {
+          id: 'finish',
+          label: 'Finish workout',
+          Icon: FinishIcon,
+          onSelect: handleFinish,
+          tone: 'danger' as const,
+          disabled: finishSession.isPending,
+        },
+      ],
+      // handleFinish and togglePause are read back through a ref when tapped,
+      // so leaving them out cannot go stale -- see useSessionActions.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      [isPaused, finishSession.isPending],
+    ),
+  )
+
   // Left alone for half an hour: close it out at the last set's time, so an
   // abandoned session does not record the idle stretch as training.
   const { touchActivity } = useAutoFinish({
@@ -437,9 +468,6 @@ function ActiveSession({ sessionId, workoutKey, startedAt, loggedSets, exercises
         <SessionDock
           displaySec={displaySec}
           isPaused={isPaused}
-          onTogglePause={togglePause}
-          onReset={() => setConfirmReset(true)}
-          onFinish={handleFinish}
           finishPending={finishSession.isPending}
         >
           {logTarget && (
@@ -940,17 +968,11 @@ function ExerciseStatusCard({
 function SessionDock({
   displaySec,
   isPaused,
-  onTogglePause,
-  onReset,
-  onFinish,
   finishPending,
   children,
 }: {
   displaySec: number
   isPaused: boolean
-  onTogglePause: () => void
-  onReset: () => void
-  onFinish: () => void
   finishPending: boolean
   children?: ReactNode
 }) {
@@ -979,6 +1001,8 @@ function SessionDock({
             tabBarHidden ? 'pb-[max(0.625rem,calc(env(safe-area-inset-bottom)_-_0.5rem))]' : ''
           }`}
         >
+        {/* Clock only: pause, reset and finish live on the floating button,
+            which the thumb can reach anywhere on the screen. */}
         <div className="flex items-center gap-1.5">
           <p className="font-display text-[26px] font-black leading-none tabular-nums text-ink">
             {formatDuration(displaySec)}
@@ -990,41 +1014,9 @@ function SessionDock({
           >
             {isPaused ? 'Paused' : 'On'}
           </span>
-          <span className="flex-1" />
-          <button
-            type="button"
-            onClick={onTogglePause}
-            aria-label={isPaused ? 'Resume workout' : 'Pause workout'}
-            className="press flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-surface text-ink"
-          >
-            {isPaused ? (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            ) : (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
-              </svg>
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={onReset}
-            aria-label="Reset workout"
-            className="press flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-surface text-ink"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M3 12a9 9 0 1 1 3 6.7M3 12v5h5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            onClick={onFinish}
-            disabled={finishPending}
-            className="press shrink-0 rounded-full border-2 border-ink bg-accent px-3 py-1.5 font-display text-[12px] font-extrabold uppercase tracking-[0.05em] text-white disabled:opacity-40"
-          >
-            {finishPending ? 'Finishing…' : 'Finish'}
-          </button>
+          {finishPending && (
+            <span className="text-[11px] font-semibold text-ink-tertiary">Finishing…</span>
+          )}
         </div>
         {children}
       </div>
